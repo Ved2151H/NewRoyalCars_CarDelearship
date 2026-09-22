@@ -146,18 +146,33 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
   };
 
   /**
-   * Uploads a single file to the server-side storage provider and returns the
-   * permanent URL. The server re-validates type (magic bytes) and size.
+   * Uploads a single file. Production flow: ask the server for a short-lived
+   * presigned PUT URL, then upload the bytes DIRECTLY to Neon Object Storage —
+   * the file never passes through the serverless function, so Vercel's
+   * 4.5 MB request-body limit is irrelevant. The presign endpoint validates
+   * session + size + declared MIME; the object key comes back server-signed.
    */
   const uploadOne = async (file: File): Promise<PhotoItem> => {
-    const fd = new FormData();
-    fd.set('file', file);
-    const res = await fetch('/api/images/upload', { method: 'POST', body: fd });
-    const json = await res.json().catch(() => null);
-    if (!res.ok || !json?.ok || !json.imageUrl) {
-      throw new Error(json?.error || 'Unable to upload the image. Please try again.');
+    const qs = new URLSearchParams({
+      name: file.name,
+      contentType: file.type || 'image/jpeg',
+      size: String(file.size),
+    });
+    const presignRes = await fetch(`/api/images/upload?${qs.toString()}`);
+    const presign = await presignRes.json().catch(() => null);
+    if (!presignRes.ok || !presign?.ok || !presign.uploadUrl) {
+      throw new Error(presign?.error || 'Unable to upload the image. Please try again.');
     }
-    return { url: json.imageUrl as string, publicId: (json.publicId as string) ?? null };
+
+    const putRes = await fetch(presign.uploadUrl as string, {
+      method: 'PUT',
+      headers: presign.headers as Record<string, string>,
+      body: file,
+    });
+    if (!putRes.ok) {
+      throw new Error('Unable to upload the image. Please try again.');
+    }
+    return { url: presign.publicUrl as string, publicId: presign.publicId as string };
   };
 
   const handleFilesSelected = async (files: FileList | null) => {

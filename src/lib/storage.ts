@@ -7,6 +7,7 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 /**
  * Image storage abstraction.
@@ -36,6 +37,18 @@ export interface StoredImage {
 export interface ImageStorageProvider {
   put(file: File): Promise<StoredImage>;
   remove(publicId: string): Promise<void>;
+}
+
+/** A short-lived upload grant: the browser PUTs directly to storage. */
+export interface PresignedUpload {
+  /** Fully-qualified URL the browser PUTs the file to (no credentials needed). */
+  uploadUrl: string;
+  /** Required headers for the PUT (Content-Type is baked into the signature). */
+  headers: Record<string, string>;
+  /** Object key in the bucket — this becomes publicId in the database. */
+  publicId: string;
+  /** Permanent public URL for serving the image after upload. */
+  publicUrl: string;
 }
 
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB per image
@@ -88,7 +101,7 @@ function neonConfig() {
     accessKeyId,
     secretAccessKey,
     region: process.env.AWS_REGION || 'us-east-2',
-    bucket: process.env.NEON_STORAGE_BUCKET || 'assets',
+    bucket: process.env.AWS_S3_BUCKET || process.env.NEON_STORAGE_BUCKET || 'assets',
   };
 }
 
@@ -113,6 +126,48 @@ function getS3(): S3Client {
     });
   }
   return s3Client;
+}
+
+/**
+ * Mint a short-lived presigned PUT URL so the browser can upload directly to
+ * Neon Object Storage. The file bytes never pass through the Vercel function,
+ * avoiding the 4.5 MB serverless request-body limit entirely. The write
+ * credential stays server-side — the presigned URL only permits a single
+ * PUT of a specific content type to a specific key and expires quickly.
+ */
+export async function createPresignedUpload(
+  fileExt: string,
+  contentType: string,
+  contentLength: number
+): Promise<PresignedUpload> {
+  const cfg = neonConfig();
+  if (!cfg) throw new Error('Neon Object Storage is not configured');
+  if (contentLength > MAX_IMAGE_BYTES) {
+    throw new Error('Image must be smaller than 10 MB.');
+  }
+
+  const ext = EXT_BY_MIME[contentType] ?? '.jpg';
+  const key = `cars/${Date.now()}-${randomBytes(6).toString('hex')}${ext}`;
+
+  // Sign ONLY Bucket/Key/ContentType. Do NOT sign ContentLength or CacheControl:
+  // presigned-PUT signatures must match the browser's request exactly, and the
+  // browser's fetch sets neither header automatically (Content-Length is
+  // controlled by the network stack; extra signed headers would break it).
+  const command = new PutObjectCommand({
+    Bucket: cfg.bucket,
+    Key: key,
+    ContentType: contentType,
+  });
+  const uploadUrl = await getSignedUrl(getS3(), command, { expiresIn: 300 });
+
+  return {
+    uploadUrl,
+    headers: {
+      'Content-Type': contentType,
+    },
+    publicId: key,
+    publicUrl: neonPublicUrl(cfg.endpoint, cfg.bucket, key),
+  };
 }
 
 const neonProvider: ImageStorageProvider = {
