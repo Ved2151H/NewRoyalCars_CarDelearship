@@ -580,6 +580,9 @@ export default function App({
                 Presented by{' '}
                 <span className="text-neutral-400">Nandu Dhanokar</span>
               </p>
+              <span className="text-[9px] text-neutral-700 tracking-wider">
+                version : 3.0
+              </span>
             </div>
           </footer>
 
