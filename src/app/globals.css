@@ -1,0 +1,157 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Manrope:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans: 'Manrope', system-ui, -apple-system, sans-serif;
+
+  /* Monochrome showroom palette — reference design system */
+  --color-ink: #050607;
+  --color-ink-2: #0a0c0d;
+  --color-ink-3: #111416;
+  --color-graphite: #1a1e21;
+  --color-charcoal: #23282c;
+  --color-silver: #c9ced4;
+  --color-silver-dim: #9aa1a8;
+}
+
+@layer utilities {
+  /* ============ Dark smoked glass (reference style) ============ */
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .glass-card {
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.05) 0%, rgba(10, 12, 13, 0.55) 100%);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  }
+
+  .glass-card-hover {
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .glass-card-hover:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.8), 0 0 40px rgba(255, 255, 255, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .glass-modal {
+    background: linear-gradient(150deg, rgba(20, 23, 25, 0.92) 0%, rgba(8, 9, 10, 0.96) 100%);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  /* Bright silver primary button (reference "Browse Cars") */
+  .btn-silver {
+    background: linear-gradient(180deg, #f2f4f6 0%, #c9ced4 100%);
+    color: #0a0c0d;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .btn-silver:hover {
+    background: linear-gradient(180deg, #ffffff 0%, #dfe3e7 100%);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(255, 255, 255, 0.12), inset 0 1px 0 rgba(255, 255, 255, 1);
+    transform: translateY(-1px);
+  }
+
+  .btn-outline {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .btn-outline:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.32);
+    transform: translateY(-1px);
+  }
+
+  /* Silver headline gradient (metallic, not gold) */
+  .silver-gradient-text {
+    background: linear-gradient(135deg, #ffffff 0%, #c9ced4 55%, #8b9298 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .text-luxury {
+    font-family: var(--font-serif);
+  }
+
+  .tracking-label {
+    letter-spacing: 0.28em;
+  }
+
+  .light-sweep {
+    position: relative;
+    overflow: hidden;
+  }
+  .light-sweep::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -60%;
+    width: 20%;
+    height: 200%;
+    background: linear-gradient(
+      60deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.12) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    transform: rotate(25deg);
+    transition: all 0.75s ease-in-out;
+  }
+  .light-sweep:hover::after {
+    left: 140%;
+  }
+}
+
+html { scroll-behavior: smooth; }
+body { overflow-x: hidden; background: #050607; }
+
+/* Cinematic section surface: drifting fog + fine grain (restrained) */
+.luxury-section-surface { position: relative; isolation: isolate; }
+.luxury-section-surface::before {
+  content: ''; position: absolute; inset: 10% -10%; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 30%, rgba(255, 255, 255, 0.05), transparent 30%),
+    radial-gradient(circle at 82% 70%, rgba(255, 255, 255, 0.03), transparent 34%);
+  filter: blur(30px);
+  animation: luxury-mesh 18s ease-in-out infinite alternate;
+}
+.luxury-section-surface::after {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E");
+}
+@keyframes luxury-mesh { from { transform: translate3d(-2%, -1%, 0) scale(1); } to { transform: translate3d(3%, 2%, 0) scale(1.08); } }
+
+/* Giant ghost watermark word (reference "CARS") */
+.ghost-word {
+  position: absolute;
+  font-family: var(--font-serif);
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.025);
+  user-select: none;
+  pointer-events: none;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: #07080a; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }

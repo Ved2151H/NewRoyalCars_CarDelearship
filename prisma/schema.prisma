@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+}
+
+enum CarStatus {
+  AVAILABLE
+  UNAVAILABLE
+  SOLD
+}
+
+enum EnquiryStatus {
+  NEW
+  CONTACTED
+  BOOKED
+  CLOSED
+  REJECTED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(ADMIN)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("admins")
+}
+
+model Car {
+  id          String    @id @default(cuid())
+  name        String
+  brand       String
+  model       String
+  carNumber   String    @unique
+  acAvailable Boolean   @default(true)
+  price       Int
+  numberOfOwners Int    @default(1)
+  kmFrom      Int
+  kmTo        Int
+  fuelType    String
+  transmission String
+  year        Int
+  description String?   @db.Text
+  status      CarStatus @default(AVAILABLE)
+  features    String[]  @default([])
+  color       String?
+  engine      String?
+  insuranceValidity String?
+  registrationRTO   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  images    CarImage[]
+  enquiries Enquiry[]
+  bookings  Booking[]
+
+  @@index([brand])
+  @@index([carNumber])
+  @@index([status])
+  @@index([price])
+  @@index([acAvailable])
+  @@index([createdAt])
+  @@map("cars")
+}
+
+model CarImage {
+  id        String   @id @default(cuid())
+  carId     String
+  imageUrl  String
+  publicId  String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  car Car @relation(fields: [carId], references: [id], onDelete: Cascade)
+
+  @@index([carId])
+  @@index([sortOrder])
+  @@map("car_images")
+}
+
+model Enquiry {
+  id           String        @id @default(cuid())
+  carId        String?
+  customerName String
+  phone        String
+  city         String?
+  email        String?
+  acRequired   Boolean       @default(true)
+  message      String?       @db.Text
+  status       EnquiryStatus @default(NEW)
+  preferredDate DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  car        Car?      @relation(fields: [carId], references: [id], onDelete: SetNull)
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([carId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("enquiries")
+}
+
+model Customer {
+  id        String    @id @default(cuid())
+  name      String
+  phone     String    @unique
+  email     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  enquiries Enquiry[]
+  bookings  Booking[]
+
+  @@index([name])
+  @@map("customers")
+}
+
+model Booking {
+  id         String        @id @default(cuid())
+  carId      String
+  customerId String
+  startDate  DateTime
+  endDate    DateTime
+  status     BookingStatus @default(PENDING)
+  notes      String?       @db.Text
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  car        Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([carId])
+  @@index([customerId])
+  @@index([status])
+  @@map("bookings")
+}
