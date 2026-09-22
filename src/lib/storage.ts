@@ -2,21 +2,30 @@ import 'server-only';
 import { createHash, randomBytes } from 'crypto';
 import { mkdir, writeFile, unlink } from 'fs/promises';
 import path from 'path';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
 
 /**
  * Image storage abstraction.
  *
- * Two providers, selected automatically:
+ * Three providers, selected automatically by priority:
  *
- * 1. Cloudinary  — used when CLOUDINARY_CLOUD_NAME + CLOUDINARY_API_KEY +
- *    CLOUDINARY_API_SECRET are set (recommended for production / Vercel).
- *    Uses the signed REST API directly — no extra SDK dependency.
+ * 1. Neon Object Storage — used when the AWS_* storage variables are set
+ *    (S3-compatible API, server-side only). Images go to a `public_read`
+ *    bucket and are served straight from the storage CDN URL, so this works
+ *    on Vercel/serverless where the filesystem is ephemeral. The database
+ *    stores the public URL + the object key (publicId) — never image bytes.
  *
- * 2. Local disk  — default for development. Writes files under public/uploads
- *    and serves them at /uploads/<name>. The database only ever stores the URL
- *    reference and a publicId — never image bytes.
+ * 2. Cloudinary  — used when CLOUDINARY_CLOUD_NAME + CLOUDINARY_API_KEY +
+ *    CLOUDINARY_API_SECRET are set. Signed REST API, no extra SDK dependency.
  *
- * Both providers return the same shape, so the upload route, server actions
+ * 3. Local disk  — fallback for development. Writes files under public/uploads
+ *    and serves them at /uploads/<name>.
+ *
+ * All providers return the same shape, so the upload route, server actions
  * and UI need no changes when the provider switches.
  */
 export interface StoredImage {
@@ -64,6 +73,87 @@ export async function sniffImageMime(file: File): Promise<string | null> {
 
   return null;
 }
+
+/* ------------------------------------------------------------------ */
+/* Neon Object Storage (S3-compatible, public_read bucket)             */
+/* ------------------------------------------------------------------ */
+
+function neonConfig() {
+  const endpoint = process.env.AWS_ENDPOINT_URL_S3;
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+  if (!endpoint || !accessKeyId || !secretAccessKey) return null;
+  return {
+    endpoint,
+    accessKeyId,
+    secretAccessKey,
+    region: process.env.AWS_REGION || 'us-east-2',
+    bucket: process.env.NEON_STORAGE_BUCKET || 'assets',
+  };
+}
+
+/** Public URL for an object in a public_read Neon bucket (path-style). */
+function neonPublicUrl(endpoint: string, bucket: string, key: string): string {
+  return `${endpoint.replace(/\/$/, '')}/${bucket}/${key.replace(/^\//, '')}`;
+}
+
+let s3Client: S3Client | null = null;
+function getS3(): S3Client {
+  const cfg = neonConfig();
+  if (!cfg) throw new Error('Neon Object Storage is not configured');
+  if (!s3Client) {
+    s3Client = new S3Client({
+      region: cfg.region,
+      endpoint: cfg.endpoint,
+      credentials: {
+        accessKeyId: cfg.accessKeyId,
+        secretAccessKey: cfg.secretAccessKey,
+      },
+      forcePathStyle: true, // required for Neon's S3-compatible endpoint
+    });
+  }
+  return s3Client;
+}
+
+const neonProvider: ImageStorageProvider = {
+  async put(file: File): Promise<StoredImage> {
+    const cfg = neonConfig();
+    if (!cfg) throw new Error('Neon Object Storage is not configured');
+
+    const mime = await sniffImageMime(file);
+    const ext = EXT_BY_MIME[mime ?? ''] ?? '.jpg';
+    const key = `cars/${Date.now()}-${randomBytes(6).toString('hex')}${ext}`;
+
+    await getS3().send(
+      new PutObjectCommand({
+        Bucket: cfg.bucket,
+        Key: key,
+        Body: Buffer.from(await file.arrayBuffer()),
+        ContentType: mime ?? 'image/jpeg',
+        CacheControl: 'public, max-age=31536000, immutable',
+      })
+    );
+
+    return {
+      imageUrl: neonPublicUrl(cfg.endpoint, cfg.bucket, key),
+      publicId: key,
+    };
+  },
+
+  async remove(publicId: string): Promise<void> {
+    const cfg = neonConfig();
+    if (!cfg || !publicId) return;
+    try {
+      await getS3().send(
+        new DeleteObjectCommand({ Bucket: cfg.bucket, Key: publicId })
+      );
+    } catch (err) {
+      // Log loudly so orphaned objects can be cleaned up later, but never
+      // fail the caller's DB flow because of a storage hiccup.
+      console.error('[storage:neon] object deletion failed', publicId, err);
+    }
+  },
+};
 
 /* ------------------------------------------------------------------ */
 /* Cloudinary (signed REST upload, no SDK)                             */
@@ -163,8 +253,14 @@ const localDiskProvider: ImageStorageProvider = {
   },
 };
 
-export const imageStorage: ImageStorageProvider = cloudinaryConfig()
-  ? cloudinaryProvider
-  : localDiskProvider;
+export const imageStorage: ImageStorageProvider = neonConfig()
+  ? neonProvider
+  : cloudinaryConfig()
+    ? cloudinaryProvider
+    : localDiskProvider;
 
-export const storageProviderName = cloudinaryConfig() ? 'cloudinary' : 'local-disk';
+export const storageProviderName = neonConfig()
+  ? 'neon-object-storage'
+  : cloudinaryConfig()
+    ? 'cloudinary'
+    : 'local-disk';
