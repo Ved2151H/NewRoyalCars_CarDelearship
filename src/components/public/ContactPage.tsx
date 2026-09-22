@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Enquiry } from '../../types';
 import { GlassButton } from '../common/GlassButton';
-import { MapPin, Phone, Mail, Clock, CheckCircle2 } from 'lucide-react';
+import { MapPin, Phone, Mail, Clock, CheckCircle2, Navigation, MessageCircle } from 'lucide-react';
+import { getDealerSettingsAction, DealerSettingsData } from '../../lib/actions/settings';
 
 interface ContactPageProps {
   onSubmitEnquiry: (enquiry: Omit<Enquiry, 'id' | 'date'>) => Promise<string>;
@@ -15,6 +16,39 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onSubmitEnquiry }) => 
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [settings, setSettings] = useState<DealerSettingsData | null>(null);
+
+  // Dealership details come from Admin Settings → PostgreSQL (single source of truth).
+  useEffect(() => {
+    let active = true;
+    getDealerSettingsAction().then((res) => {
+      if (active && res.ok && res.data) setSettings(res.data);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const dealershipName = settings?.dealershipName ?? 'NEW ROYAL CARS';
+  const contactPhone = settings?.contactPhone ?? '+91 98200 12345';
+  const supportEmail = settings?.supportEmail ?? 'concierge@newroyalcars.com';
+  const showroomAddress = settings?.showroomAddress ?? 'Plot 42, Royal Pavilion Blvd, Worli Sea Face, Mumbai 400018';
+  const businessHours = settings?.businessHours ?? 'Mon – Sun: 10:00 AM – 8:30 PM';
+  const whatsappNumber = settings?.whatsappNumber ?? '';
+  const mapsUrl = settings?.mapsUrl ?? '';
+
+  const telHref = `tel:${contactPhone.replace(/[^+\d]/g, '')}`;
+  const mailHref = `mailto:${supportEmail}`;
+  const waHref = whatsappNumber
+    ? `https://wa.me/${whatsappNumber.replace(/[^\d]/g, '')}`
+    : null;
+  // Split the address into two visual lines at the first comma for the card layout.
+  const addressLines = showroomAddress.includes(',')
+    ? [
+        showroomAddress.slice(0, showroomAddress.indexOf(',')),
+        showroomAddress.slice(showroomAddress.indexOf(',') + 1).trim(),
+      ]
+    : [showroomAddress];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,32 +102,98 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onSubmitEnquiry }) => 
         {/* Contact info */}
         <div className="lg:col-span-5 space-y-4">
           {[
-            { icon: <MapPin className="w-4 h-4" />, title: 'Showroom', lines: ['Plot 42, Royal Pavilion Blvd', 'Worli Sea Face, Mumbai 400018'] },
-            { icon: <Phone className="w-4 h-4" />, title: 'Phone', lines: ['+91 98200 12345', '022 4589 7700'] },
-            { icon: <Mail className="w-4 h-4" />, title: 'Email', lines: ['concierge@newroyalcars.com'] },
-            { icon: <Clock className="w-4 h-4" />, title: 'Hours', lines: ['Mon – Sun: 10:00 AM – 8:30 PM'] },
-          ].map((item, idx) => (
+            {
+              icon: <MapPin className="w-4 h-4" />,
+              title: 'Showroom',
+              lines: addressLines,
+              href: mapsUrl || undefined,
+              hrefLabel: mapsUrl ? 'Open in Google Maps' : undefined,
+              hrefIcon: <Navigation className="w-3 h-3" />,
+            },
+            {
+              icon: <Phone className="w-4 h-4" />,
+              title: 'Phone',
+              lines: [contactPhone],
+              href: telHref,
+              hrefLabel: 'Call now',
+              hrefIcon: <Phone className="w-3 h-3" />,
+            },
+            {
+              icon: <Mail className="w-4 h-4" />,
+              title: 'Email',
+              lines: [supportEmail],
+              href: mailHref,
+              hrefLabel: 'Write to us',
+              hrefIcon: <Mail className="w-3 h-3" />,
+            },
+            {
+              icon: <Clock className="w-4 h-4" />,
+              title: 'Hours',
+              lines: businessHours ? [businessHours] : [],
+            },
+          ]
+            .filter((item) => item.lines.length > 0)
+            .map((item, idx) => (
+              <motion.div
+                key={item.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.55, delay: idx * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                className="rounded-2xl glass-card p-5 flex items-start gap-4"
+              >
+                <div className="w-10 h-10 rounded-xl glass-panel flex items-center justify-center text-neutral-300 shrink-0">
+                  {item.icon}
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-white mb-1">{item.title}</h3>
+                  {item.lines.map((line) => (
+                    <p key={line} className="text-xs text-neutral-400 leading-relaxed">
+                      {line}
+                    </p>
+                  ))}
+                  {item.href && item.hrefLabel && (
+                    <a
+                      href={item.href}
+                      target={item.href.startsWith('http') ? '_blank' : undefined}
+                      rel={item.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+                      className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-medium text-neutral-300 hover:text-white transition-colors"
+                    >
+                      {item.hrefIcon}
+                      {item.hrefLabel}
+                    </a>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+
+          {waHref && (
             <motion.div
-              key={item.title}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-40px' }}
-              transition={{ duration: 0.55, delay: idx * 0.1, ease: [0.16, 1, 0.3, 1] }}
-              className="rounded-2xl glass-card p-5 flex items-start gap-4"
+              transition={{ duration: 0.55, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              className="rounded-2xl glass-card p-5 flex items-center justify-between gap-4"
             >
-              <div className="w-10 h-10 rounded-xl glass-panel flex items-center justify-center text-neutral-300 shrink-0">
-                {item.icon}
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl glass-panel flex items-center justify-center text-neutral-300 shrink-0">
+                  <MessageCircle className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-white mb-1">WhatsApp</h3>
+                  <p className="text-xs text-neutral-400 leading-relaxed">{whatsappNumber}</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm font-semibold text-white mb-1">{item.title}</h3>
-                {item.lines.map((line) => (
-                  <p key={line} className="text-xs text-neutral-400 leading-relaxed">
-                    {line}
-                  </p>
-                ))}
-              </div>
+              <a
+                href={waHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3.5 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-xs font-medium text-neutral-200 hover:text-white transition-all"
+              >
+                Chat now
+              </a>
             </motion.div>
-          ))}
+          )}
         </div>
 
         {/* Form */}

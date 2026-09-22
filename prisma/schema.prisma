@@ -136,6 +136,23 @@ model Customer {
   @@map("customers")
 }
 
+model DealerSettings {
+  id           String  @id @default(cuid())
+  dealershipName String
+  contactPhone   String
+  supportEmail   String
+  showroomAddress String
+  businessHours  String?
+  whatsappNumber String?
+  mapsUrl        String?
+  enableInstantSms  Boolean @default(true)
+  enableEmailAlerts Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("dealer_settings")
+}
+
 model Booking {
   id         String        @id @default(cuid())
   carId      String
