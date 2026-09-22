@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { imageStorage, MAX_IMAGE_BYTES } from '@/lib/storage';
+import {
+  imageStorage,
+  sniffImageMime,
+  ALLOWED_MIME_TYPES,
+  MAX_IMAGE_BYTES,
+} from '@/lib/storage';
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
+const UPLOAD_FIELDS = ['file'] as const;
 
 export async function POST(req: NextRequest) {
   // Server-side auth — uploads are admin-only.
@@ -13,28 +18,67 @@ export async function POST(req: NextRequest) {
 
   try {
     const formData = await req.formData();
-    const file = formData.get('file');
+    const file = formData.get(UPLOAD_FIELDS[0]);
 
     if (!(file instanceof File)) {
       return NextResponse.json({ error: 'No file provided.' }, { status: 400 });
     }
-    if (!ALLOWED_TYPES.includes(file.type)) {
+
+    // 1. Size first (cheap).
+    if (file.size > MAX_IMAGE_BYTES) {
       return NextResponse.json(
-        { error: 'Unsupported format. Use JPEG, PNG, WebP or AVIF.' },
+        { error: 'Image must be smaller than 10 MB.' },
+        { status: 413 }
+      );
+    }
+    if (file.size === 0) {
+      return NextResponse.json({ error: 'The selected file is empty.' }, { status: 400 });
+    }
+
+    // 2. Declared MIME type.
+    if (!ALLOWED_MIME_TYPES.includes(file.type as (typeof ALLOWED_MIME_TYPES)[number])) {
+      return NextResponse.json(
+        { error: 'Only JPG, PNG and WebP images are supported.' },
         { status: 415 }
       );
     }
-    if (file.size > MAX_IMAGE_BYTES) {
+
+    // 3. Magic-byte check — never trust the browser's declared type.
+    const sniffed = await sniffImageMime(file);
+    if (!sniffed || !ALLOWED_MIME_TYPES.includes(sniffed as (typeof ALLOWED_MIME_TYPES)[number])) {
       return NextResponse.json(
-        { error: `Image too large. Maximum ${MAX_IMAGE_BYTES / (1024 * 1024)} MB.` },
-        { status: 413 }
+        { error: 'Only JPG, PNG and WebP images are supported.' },
+        { status: 415 }
       );
     }
 
     const stored = await imageStorage.put(file);
     return NextResponse.json({ ok: true, ...stored });
   } catch (err) {
-    console.error('[uploadImages]', err);
-    return NextResponse.json({ error: 'Image upload failed. Please try again.' }, { status: 500 });
+    console.error('[uploadImage]', err);
+    return NextResponse.json(
+      { error: 'Unable to upload the image. Please try again.' },
+      { status: 500 }
+    );
+  }
+}
+
+/** Delete a previously uploaded image from storage (admin-only). */
+export async function DELETE(req: NextRequest) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const publicId = req.nextUrl.searchParams.get('publicId');
+    if (!publicId) {
+      return NextResponse.json({ error: 'publicId is required.' }, { status: 400 });
+    }
+    await imageStorage.remove(publicId);
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error('[deleteUploadedImage]', err);
+    return NextResponse.json({ error: 'Unable to delete the image.' }, { status: 500 });
   }
 }

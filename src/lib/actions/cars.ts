@@ -15,6 +15,47 @@ import { imageStorage, MAX_IMAGES_PER_CAR } from '@/lib/storage';
 import { firstZodError, zodFieldErrors, type ActionResult } from '@/lib/utils';
 import type { Car } from '@/types';
 
+/**
+ * Accepts only http(s) URLs or app-relative /uploads paths — never blob/data
+ * URLs. Block-level previews must be uploaded to real storage first.
+ */
+function isSavableImageUrl(url: string): boolean {
+  if (url.startsWith('/uploads/')) return true;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
+function parseImageList(formData: FormData): {
+  urls: string[];
+  publicIds: Record<string, string>;
+} {
+  let rawUrls: unknown = [];
+  let rawIds: unknown = {};
+  try {
+    rawUrls = JSON.parse(String(formData.get('imageUrls') || '[]'));
+  } catch {
+    /* handled below */
+  }
+  try {
+    rawIds = JSON.parse(String(formData.get('imagePublicIds') || '{}'));
+  } catch {
+    /* optional field */
+  }
+
+  const urls = Array.isArray(rawUrls) ? rawUrls.filter((u): u is string => typeof u === 'string') : [];
+  const publicIds: Record<string, string> = {};
+  if (rawIds && typeof rawIds === 'object') {
+    for (const [url, id] of Object.entries(rawIds as Record<string, unknown>)) {
+      if (typeof id === 'string' && id.length > 0) publicIds[url] = id;
+    }
+  }
+  return { urls, publicIds };
+}
+
 /* ==================================================================
    ADMIN — CAR CRUD
    ================================================================== */
@@ -57,15 +98,14 @@ export async function saveCarAction(
       registrationRTO: data.registrationRTO || null,
     };
 
-    const imageUrls: string[] = (() => {
-      try {
-        const raw = JSON.parse(String(formData.get('imageUrls') || '[]'));
-        return Array.isArray(raw) ? raw.filter((u: unknown) => typeof u === 'string') : [];
-      } catch {
-        return [];
-      }
-    })();
+    const { urls: imageUrls, publicIds: imagePublicIds } = parseImageList(formData);
 
+    if (imageUrls.some((u) => !isSavableImageUrl(u))) {
+      return {
+        ok: false,
+        error: 'One or more photos were not uploaded correctly. Please re-add them and save again.',
+      };
+    }
     if (imageUrls.length > MAX_IMAGES_PER_CAR) {
       return { ok: false, error: `Maximum ${MAX_IMAGES_PER_CAR} images per car.` };
     }
@@ -85,13 +125,16 @@ export async function saveCarAction(
       });
       if (dupe) return { ok: false, error: 'Another car already uses this RC number.' };
 
+      // Compute removals outside the transaction so storage cleanup can run
+      // after the DB commit.
+      const currentUrls = new Set(existing.images.map((i) => i.imageUrl));
+      const nextUrls = new Set(imageUrls);
+      const toDelete = existing.images.filter((i) => !nextUrls.has(i.imageUrl));
+
       await prisma.$transaction(async (tx) => {
         await tx.car.update({ where: { id: existingId }, data: payload });
 
         // Sync images: delete removed ones, add new ones, keep order stable.
-        const currentUrls = new Set(existing.images.map((i) => i.imageUrl));
-        const nextUrls = new Set(imageUrls);
-        const toDelete = existing.images.filter((i) => !nextUrls.has(i.imageUrl));
         await tx.carImage.deleteMany({ where: { id: { in: toDelete.map((i) => i.id) } } });
 
         let order = 0;
@@ -103,11 +146,24 @@ export async function saveCarAction(
             });
           } else {
             await tx.carImage.create({
-              data: { carId: existingId, imageUrl: url, sortOrder: order++, publicId: null },
+              data: {
+                carId: existingId,
+                imageUrl: url,
+                sortOrder: order++,
+                publicId: imagePublicIds[url] ?? null,
+              },
             });
           }
         }
       });
+
+      // After the DB transaction commits, remove orphaned files from storage
+      // (only rows that actually had a storage-backed publicId).
+      for (const removed of toDelete) {
+        if (removed.publicId) {
+          await imageStorage.remove(removed.publicId).catch(() => undefined);
+        }
+      }
 
       revalidatePath('/');
       revalidatePath('/admin');
@@ -122,7 +178,11 @@ export async function saveCarAction(
       data: {
         ...payload,
         images: {
-          create: imageUrls.map((imageUrl, i) => ({ imageUrl, sortOrder: i, publicId: null })),
+          create: imageUrls.map((imageUrl, i) => ({
+            imageUrl,
+            sortOrder: i,
+            publicId: imagePublicIds[imageUrl] ?? null,
+          })),
         },
       },
     });
@@ -142,7 +202,16 @@ export async function saveCarAction(
 export async function deleteCarAction(carId: string): Promise<ActionResult> {
   try {
     await requireAdmin();
-    await prisma.car.delete({ where: { id: carId } }); // images cascade
+    const car = await prisma.car.delete({
+      where: { id: carId },
+      include: { images: true },
+    });
+    // Best-effort storage cleanup for this car's uploaded photos.
+    for (const img of car.images) {
+      if (img.publicId) {
+        await imageStorage.remove(img.publicId).catch(() => undefined);
+      }
+    }
     revalidatePath('/');
     revalidatePath('/admin');
     return { ok: true };

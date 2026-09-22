@@ -5,6 +5,9 @@ node_modules/
 .next/
 out/
 
+# user-uploaded images (dev local-disk storage)
+public/uploads/
+
 # env
 .env
 .env.local

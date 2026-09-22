@@ -18,9 +18,27 @@ import {
 
 interface AdminAddCarProps {
   initialCar?: Car | null;
-  onSaveCar: (car: Car, imageUrls: string[]) => Promise<void>;
+  onSaveCar: (
+    car: Car,
+    imageUrls: string[],
+    imagePublicIds?: Record<string, string>
+  ) => Promise<void>;
   onCancel: () => void;
 }
+
+// Photos — permanent storage URLs. Device photos are uploaded to storage the
+// moment they are selected, so previews show the real URL that gets saved.
+interface PhotoItem {
+  url: string;
+  publicId: string | null;
+}
+
+const PLACEHOLDER_IMAGE =
+  'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=1400&q=80';
+
+const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+const MAX_FILE_MB = 10;
+const MAX_PHOTOS = 10;
 
 export const AdminAddCar: React.FC<AdminAddCarProps> = ({
   initialCar,
@@ -59,20 +77,22 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
   const [featuresList, setFeaturesList] = useState<string[]>(initialCar?.features || []);
   const [newFeatureText, setNewFeatureText] = useState('');
 
-  // Photos — start empty; a neutral placeholder is used until the admin adds real photos.
-  const [images, setImages] = useState<string[]>(
-    initialCar && !initialCar.images[0]?.includes('unsplash') ? initialCar.images : []
-  );
+  const [photos, setPhotos] = useState<PhotoItem[]>(() => {
+    if (!initialCar) return [];
+    const isPlaceholder = initialCar.images.length === 1 && initialCar.images[0].includes('unsplash');
+    if (isPlaceholder) return [];
+    return initialCar.images.map((url) => ({ url, publicId: null }));
+  });
   const [imageUrlInput, setImageUrlInput] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(
+    null
+  );
   const [formError, setFormError] = useState<string | null>(null);
   const [shakeError, setShakeError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const PLACEHOLDER_IMAGE =
-    'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=1400&q=80';
 
   const handleAddFeature = () => {
     if (newFeatureText.trim()) {
@@ -86,68 +106,125 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
   };
 
   const handleAddImage = (url: string) => {
-    if (url.trim() && !images.includes(url.trim())) {
-      setImages([...images, url.trim()]);
-      setImageUrlInput('');
+    const trimmed = url.trim();
+    if (!trimmed) return;
+    if (photos.some((p) => p.url === trimmed)) {
+      setFormError('That image has already been added.');
+      setShakeError(true);
+      return;
     }
+    if (photos.length >= MAX_PHOTOS) {
+      setFormError(`Maximum ${MAX_PHOTOS} photos per car.`);
+      setShakeError(true);
+      return;
+    }
+    setPhotos((prev) => [...prev, { url: trimmed, publicId: null }]);
+    setImageUrlInput('');
   };
 
   const handleRemoveImage = (index: number) => {
-    setImages(images.filter((_, i) => i !== index));
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleMoveImage = (index: number, dir: -1 | 1) => {
-    const next = [...images];
-    const target = index + dir;
-    if (target < 0 || target >= next.length) return;
-    [next[index], next[target]] = [next[target], next[index]];
-    setImages(next);
+    setPhotos((prev) => {
+      const next = [...prev];
+      const target = index + dir;
+      if (target < 0 || target >= next.length) return prev;
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
   };
 
   const handleSetPrimary = (index: number) => {
     if (index === 0) return;
-    const next = [...images];
-    const [img] = next.splice(index, 1);
-    setImages([img, ...next]);
+    setPhotos((prev) => {
+      const next = [...prev];
+      const [img] = next.splice(index, 1);
+      return [img, ...next];
+    });
   };
 
-  /** Client-side compression keeps uploads well under the 2 MB server cap. */
-  const compressImage = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const maxDim = 1600;
-          const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-          canvas.width = Math.round(img.width * scale);
-          canvas.height = Math.round(img.height * scale);
-          const ctx = canvas.getContext('2d');
-          if (!ctx) return reject(new Error('Canvas unavailable'));
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL('image/jpeg', 0.82));
-        };
-        img.onerror = () => reject(new Error('Could not read image'));
-        img.src = String(reader.result);
-      };
-      reader.onerror = () => reject(new Error('Could not read file'));
-      reader.readAsDataURL(file);
-    });
+  /**
+   * Uploads a single file to the server-side storage provider and returns the
+   * permanent URL. The server re-validates type (magic bytes) and size.
+   */
+  const uploadOne = async (file: File): Promise<PhotoItem> => {
+    const fd = new FormData();
+    fd.set('file', file);
+    const res = await fetch('/api/images/upload', { method: 'POST', body: fd });
+    const json = await res.json().catch(() => null);
+    if (!res.ok || !json?.ok || !json.imageUrl) {
+      throw new Error(json?.error || 'Unable to upload the image. Please try again.');
+    }
+    return { url: json.imageUrl as string, publicId: (json.publicId as string) ?? null };
+  };
 
   const handleFilesSelected = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    setUploading(true);
     setFormError(null);
+
+    const list = Array.from(files);
+
+    // Client-side validation — the server validates again on its own.
+    const rejected: string[] = [];
+    const valid: File[] = [];
+    for (const f of list) {
+      const okType = ALLOWED_FILE_TYPES.includes(f.type.toLowerCase());
+      const okSize = f.size > 0 && f.size <= MAX_FILE_MB * 1024 * 1024;
+      if (okType && okSize) valid.push(f);
+      else if (!okType) rejected.push(`“${f.name}” is not a JPG, PNG or WebP image.`);
+      else rejected.push(`“${f.name}” must be smaller than ${MAX_FILE_MB} MB.`);
+    }
+
+    // Respect the remaining slot count and skip duplicates by name+size.
+    const remaining = MAX_PHOTOS - photos.length;
+    const existingKeys = new Set(photos.map((p) => `${p.url}`));
+    const queue: File[] = [];
+    for (const f of valid) {
+      if (queue.length >= remaining) {
+        rejected.push(`Maximum ${MAX_PHOTOS} photos per car.`);
+        break;
+      }
+      const key = `file:${f.name}:${f.size}`;
+      if (existingKeys.has(key)) {
+        rejected.push(`“${f.name}” has already been added.`);
+        continue;
+      }
+      existingKeys.add(key);
+      queue.push(f);
+    }
+
+    if (rejected.length > 0) {
+      setFormError(rejected.slice(0, 3).join(' '));
+      setShakeError(true);
+    }
+    if (queue.length === 0) {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    setUploading(true);
+    setUploadProgress({ done: 0, total: queue.length });
+    const uploaded: PhotoItem[] = [];
     try {
-      const remaining = 12 - images.length;
-      const list = Array.from(files).slice(0, remaining);
-      const dataUrls = await Promise.all(list.map(compressImage));
-      setImages((prev) => [...prev, ...dataUrls]);
-    } catch {
-      setFormError('One or more images could not be processed. Try JPEG/PNG under 10 MB.');
+      // Sequential keeps progress honest and avoids provider rate limits.
+      for (let i = 0; i < queue.length; i++) {
+        const item = await uploadOne(queue[i]);
+        uploaded.push(item);
+        setUploadProgress({ done: i + 1, total: queue.length });
+      }
+      setPhotos((prev) => [...prev, ...uploaded]);
+    } catch (err) {
+      setFormError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to upload the image. Please try again.'
+      );
+      setShakeError(true);
     } finally {
       setUploading(false);
+      setUploadProgress(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -178,7 +255,7 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
       transmission,
       year: numericYear,
       availability,
-      images: images.length > 0 ? images : [PLACEHOLDER_IMAGE],
+      images: photos.length > 0 ? photos.map((p) => p.url) : [PLACEHOLDER_IMAGE],
       description: description.trim(),
       features: featuresList,
       color: color.trim() || 'Not specified',
@@ -191,7 +268,12 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
     setIsSaving(true);
     setFormError(null);
     try {
-      await onSaveCar(newCar, images);
+      // Only pass publicIds for storage-uploaded photos (URL-pasted ones have none).
+      const publicIdMap: Record<string, string> = {};
+      for (const p of photos) {
+        if (p.publicId) publicIdMap[p.url] = p.publicId;
+      }
+      await onSaveCar(newCar, photos.map((p) => p.url), publicIdMap);
       setSaveSuccess(true);
       setTimeout(() => {
         setSaveSuccess(false);
@@ -302,6 +384,18 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
                 value={brand}
                 onChange={(e) => setBrand(e.target.value)}
                 placeholder="e.g. Hyundai, Mercedes-Benz"
+                className="w-full px-3 py-2 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:outline-none focus:border-white/60"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-neutral-300 font-medium mb-1">Model *</label>
+              <input
+                type="text"
+                required
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                placeholder="e.g. Creta SX(O)"
                 className="w-full px-3 py-2 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:outline-none focus:border-white/60"
               />
             </div>
@@ -615,7 +709,7 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
               Vehicle Photography
             </h3>
             <span className="text-xs text-neutral-400">
-              {images.length} Image{images.length === 1 ? '' : 's'} Added
+              {photos.length} / {MAX_PHOTOS} Photos
             </span>
           </div>
 
@@ -632,7 +726,7 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp,image/avif"
+              accept="image/jpeg,image/png,image/webp"
               multiple
               className="hidden"
               onChange={(e) => handleFilesSelected(e.target.files)}
@@ -646,11 +740,31 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
             </div>
             <div className="text-sm font-semibold text-white mb-1 flex items-center justify-center gap-2">
               <ImagePlus className="w-4 h-4 text-neutral-400" />
-              {uploading ? 'Processing photos…' : 'Upload photos from your device'}
+              {uploading
+                ? `Uploading images… ${uploadProgress ? Math.round((uploadProgress.done / uploadProgress.total) * 100) : 0}%`
+                : 'Upload photos from your device'}
             </div>
+            {uploading && uploadProgress && (
+              <div className="max-w-xs mx-auto mb-3">
+                <div className="h-1 rounded-full bg-white/10 overflow-hidden">
+                  <motion.div
+                    className="h-full bg-white/80 rounded-full"
+                    initial={{ width: '0%' }}
+                    animate={{
+                      width: `${Math.round((uploadProgress.done / uploadProgress.total) * 100)}%`,
+                    }}
+                    transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                  />
+                </div>
+                <p className="text-[11px] text-neutral-400 mt-1.5 font-mono">
+                  {uploadProgress.done} / {uploadProgress.total} photo
+                  {uploadProgress.total === 1 ? '' : 's'} uploaded
+                </p>
+              </div>
+            )}
             <p className="text-xs text-neutral-400 mb-3">
-              Click to browse or drag &amp; drop — JPEG, PNG, WebP. Up to 12 images, first one
-              becomes the showroom cover.
+              Click to browse or drag &amp; drop — JPEG, PNG, WebP up to {MAX_FILE_MB} MB each.
+              Up to {MAX_PHOTOS} photos, first one becomes the showroom cover.
             </p>
 
             {/* Optional URL Input */}
@@ -679,18 +793,18 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
           </div>
 
           {/* Active Image Previews with Remove */}
-          {images.length > 0 && (
+          {photos.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-              {images.map((img, idx) => (
+              {photos.map((photo, idx) => (
                 <motion.div
-                  key={`${img.slice(0, 40)}-${idx}`}
+                  key={`${photo.url.slice(0, 60)}-${idx}`}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                   className="relative group rounded-xl overflow-hidden h-28 border border-white/15 bg-black"
                 >
                   <img
-                    src={img}
+                    src={photo.url}
                     alt={`Preview ${idx + 1}`}
                     className="w-full h-full object-cover"
                   />
@@ -709,7 +823,7 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
                     <button
                       type="button"
                       onClick={() => handleMoveImage(idx, 1)}
-                      disabled={idx === images.length - 1}
+                      disabled={idx === photos.length - 1}
                       className="p-1 rounded-md bg-black/70 text-neutral-300 hover:text-white disabled:opacity-30 transition-colors"
                       title="Move later"
                     >
@@ -765,8 +879,12 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
               isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />
             }
           >
-            {isSaving
-              ? 'Saving to Database…'
+            {uploading
+              ? 'Uploading photos…'
+              : isSaving
+              ? isEditing
+                ? 'Updating Vehicle…'
+                : 'Creating Car…'
               : isEditing
               ? 'Update Vehicle'
               : 'Save Car to Showroom'}

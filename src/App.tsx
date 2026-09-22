@@ -182,7 +182,7 @@ export default function App({
   }, []);
 
   const handleSaveCar = useCallback(
-    async (car: Car, imageUrls: string[]) => {
+    async (car: Car, imageUrls: string[], imagePublicIds?: Record<string, string>) => {
       const fd = new FormData();
       fd.set('payload', JSON.stringify({
         name: car.name,
@@ -211,6 +211,7 @@ export default function App({
         registrationRTO: car.registrationRTO === 'Not specified' ? '' : car.registrationRTO,
       }));
       fd.set('imageUrls', JSON.stringify(imageUrls));
+      fd.set('imagePublicIds', JSON.stringify(imagePublicIds ?? {}));
       if (!car.id.startsWith('car-')) fd.set('carId', car.id);
 
       const res = await saveCarAction(fd);
