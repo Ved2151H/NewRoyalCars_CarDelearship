@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { Check, ChevronDown } from 'lucide-react';
 
@@ -20,14 +21,23 @@ const DEFAULT_BUTTON_CLASS =
   'w-full appearance-none px-4 py-3 pr-10 rounded-xl glass-panel text-sm text-left text-neutral-200 focus:outline-none focus:border-white/30 cursor-pointer transition-all duration-300 hover:border-white/20';
 
 const MENU_MAX_HEIGHT = 260;
+/** Above glass cards, sticky navbars, modals and the admin sidebar. */
+const MENU_Z_INDEX = 80;
 
 /**
  * Fully custom dark-glass dropdown used everywhere in the app.
- * Replaces native <select> so the open menu never renders with the
- * browser's default white background.
  *
- * Accessibility: click + keyboard navigation (arrows, Enter, Space,
- * Home/End), Escape to close, outside click to close, ARIA listbox roles.
+ * The open menu renders through a React portal attached to document.body so it
+ * always escapes every glass card / overflow / backdrop-filter stacking
+ * context — it can never be clipped or buried behind another panel.
+ *
+ * Positioning is computed from the trigger's getBoundingClientRect(): the menu
+ * opens directly below the field (or flips above when the viewport edge is
+ * near), stays horizontally clamped inside the viewport, follows the trigger
+ * while the page scrolls, and closes if the trigger scrolls out of view.
+ *
+ * Accessibility: click + keyboard navigation (arrows, Home/End, Enter, Space),
+ * Escape to close, Tab to dismiss, outside click to close, ARIA listbox roles.
  */
 export const GlassSelect: React.FC<GlassSelectProps> = ({
   value,
@@ -44,23 +54,42 @@ export const GlassSelect: React.FC<GlassSelectProps> = ({
     width: number;
     up: boolean;
   } | null>(null);
+  const [mounted, setMounted] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const rootRef = useRef<HTMLDivElement>(null);
 
   const selected = options.find((o) => o.value === value);
 
-  const computeCoords = useCallback(() => {
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const computeCoords = useCallback((): {
+    top: number;
+    left: number;
+    width: number;
+    up: boolean;
+  } | null => {
     const rect = buttonRef.current?.getBoundingClientRect();
     if (!rect) return null;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const up = spaceBelow < MENU_MAX_HEIGHT + 20 && rect.top > spaceBelow;
-    return {
-      top: up ? rect.top - 8 : rect.bottom + 8,
-      left: rect.left,
-      width: rect.width,
-      up,
-    };
+
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+
+    // Actual menu height is bounded by MENU_MAX_HEIGHT; measure when available.
+    const menuH = Math.min(menuRef.current?.scrollHeight ?? MENU_MAX_HEIGHT, MENU_MAX_HEIGHT);
+
+    // Flip above when there is no room below but there is above.
+    const spaceBelow = viewportH - rect.bottom;
+    const up = spaceBelow < menuH + 16 && rect.top > spaceBelow;
+
+    const top = up ? rect.top - menuH - 8 : rect.bottom + 8;
+
+    // Horizontal clamp — never overflow the viewport (mobile safety).
+    const width = Math.max(rect.width, 176);
+    const left = Math.min(Math.max(8, rect.left), Math.max(8, viewportW - width - 8));
+
+    return { top, left, width, up };
   }, []);
 
   const openMenu = useCallback(() => {
@@ -86,12 +115,12 @@ export const GlassSelect: React.FC<GlassSelectProps> = ({
     [options, onChange, closeMenu]
   );
 
-  /* ---------- outside click to close ---------- */
+  /* ---------- outside click to close (portal-aware) ---------- */
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (e: MouseEvent | TouchEvent) => {
       const target = e.target as Node;
-      if (rootRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+      if (buttonRef.current?.contains(target) || menuRef.current?.contains(target)) return;
       closeMenu();
     };
     document.addEventListener('mousedown', onPointerDown);
@@ -102,17 +131,37 @@ export const GlassSelect: React.FC<GlassSelectProps> = ({
     };
   }, [open, closeMenu]);
 
-  /* ---------- keep menu anchored on scroll / resize ---------- */
+  /* ---------- keep the menu glued to its trigger ---------- */
   useEffect(() => {
     if (!open) return;
-    const reposition = () => setCoords(computeCoords());
+
+    // rAF-throttled reposition on scroll/resize; closes if trigger leaves view.
+    let raf = 0;
+    const reposition = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const rect = buttonRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        // Trigger scrolled out of view (modal/list virtualization safety).
+        if (rect.bottom < -40 || rect.top > window.innerHeight + 40) {
+          closeMenu();
+          return;
+        }
+        setCoords(computeCoords());
+      });
+    };
+
+    // Window + capture-phase scroll catches scrolls in ANY ancestor container.
     window.addEventListener('resize', reposition);
     window.addEventListener('scroll', reposition, true);
+    reposition();
+
     return () => {
+      cancelAnimationFrame(raf);
       window.removeEventListener('resize', reposition);
       window.removeEventListener('scroll', reposition, true);
     };
-  }, [open, computeCoords]);
+  }, [open, computeCoords, closeMenu]);
 
   /* ---------- keyboard navigation ---------- */
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -158,8 +207,54 @@ export const GlassSelect: React.FC<GlassSelectProps> = ({
     }
   };
 
+  const menu = (
+    <AnimatePresence>
+      {open && coords && (
+        <motion.div
+          ref={menuRef}
+          role="listbox"
+          initial={{ opacity: 0, y: coords.up ? 6 : -4, scale: 0.98, filter: 'blur(4px)' }}
+          animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+          exit={{ opacity: 0, y: coords.up ? 4 : -4, scale: 0.98, filter: 'blur(3px)' }}
+          transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+          style={{
+            position: 'fixed',
+            top: coords.top,
+            left: coords.left,
+            width: coords.width,
+            maxHeight: MENU_MAX_HEIGHT,
+            zIndex: MENU_Z_INDEX,
+          }}
+          className="rounded-xl bg-[#0a0b0d]/95 backdrop-blur-2xl border border-white/15 shadow-[0_24px_70px_rgba(0,0,0,0.85)] overflow-hidden"
+        >
+          <div className="max-h-full overflow-y-auto py-1.5">
+            {options.map((opt, idx) => {
+              const isSelected = opt.value === value;
+              const isHighlighted = idx === highlight;
+              return (
+                <div
+                  key={opt.value}
+                  role="option"
+                  aria-selected={isSelected}
+                  onMouseEnter={() => setHighlight(idx)}
+                  onClick={() => commitHighlight(idx)}
+                  className={`px-4 py-2.5 text-sm cursor-pointer flex items-center justify-between gap-3 transition-colors duration-150 ${
+                    isHighlighted ? 'bg-white/[0.07] text-white' : 'text-neutral-300'
+                  } ${isSelected ? 'font-semibold text-white' : ''}`}
+                >
+                  <span className="truncate">{opt.label}</span>
+                  {isSelected && <Check className="w-3.5 h-3.5 text-neutral-300 shrink-0" />}
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
   return (
-    <div ref={rootRef} className="relative">
+    <div className="relative">
       <button
         ref={buttonRef}
         type="button"
@@ -179,48 +274,8 @@ export const GlassSelect: React.FC<GlassSelectProps> = ({
         />
       </button>
 
-      <AnimatePresence>
-        {open && coords && (
-          <motion.div
-            ref={menuRef}
-            role="listbox"
-            initial={{ opacity: 0, y: coords.up ? 6 : -6, scale: 0.97, filter: 'blur(4px)' }}
-            animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, y: coords.up ? 4 : -4, scale: 0.98, filter: 'blur(3px)' }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            style={{
-              position: 'fixed',
-              top: coords.top,
-              left: coords.left,
-              width: Math.max(coords.width, 176),
-              zIndex: 70,
-            }}
-            className="rounded-xl bg-[#0a0b0d]/95 backdrop-blur-2xl border border-white/15 shadow-[0_24px_70px_rgba(0,0,0,0.85)] overflow-hidden"
-          >
-            <div className="max-h-[260px] overflow-y-auto py-1.5">
-              {options.map((opt, idx) => {
-                const isSelected = opt.value === value;
-                const isHighlighted = idx === highlight;
-                return (
-                  <div
-                    key={opt.value}
-                    role="option"
-                    aria-selected={isSelected}
-                    onMouseEnter={() => setHighlight(idx)}
-                    onClick={() => commitHighlight(idx)}
-                    className={`px-4 py-2.5 text-sm cursor-pointer flex items-center justify-between gap-3 transition-colors duration-150 ${
-                      isHighlighted ? 'bg-white/[0.07] text-white' : 'text-neutral-300'
-                    } ${isSelected ? 'font-semibold text-white' : ''}`}
-                  >
-                    <span className="truncate">{opt.label}</span>
-                    {isSelected && <Check className="w-3.5 h-3.5 text-neutral-300 shrink-0" />}
-                  </div>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Portal: escapes every glass panel / overflow / stacking context. */}
+      {mounted && createPortal(menu, document.body)}
     </div>
   );
 };
