@@ -320,6 +320,11 @@ export default function App({
   }, []);
 
   const pendingEnquiriesCount = enquiries.filter((e) => e.status === 'Pending').length;
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const pendingEnquiries = useMemo(
+    () => enquiries.filter((e) => e.status === 'Pending'),
+    [enquiries]
+  );
 
   const handleLogout = useCallback(async () => {
     await logoutAction();
@@ -387,6 +392,9 @@ export default function App({
                 isCollapsed={isSidebarCollapsed}
                 onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                 pendingEnquiriesCount={pendingEnquiriesCount}
+                onBackToWebsite={() => handleNavigate('home')}
+                mobileOpen={isMobileNavOpen}
+                onMobileOpenChange={setIsMobileNavOpen}
               />
 
               <div
@@ -399,6 +407,10 @@ export default function App({
                   pendingCount={pendingEnquiriesCount}
                   adminUsername={adminEmail}
                   onLogout={handleLogout}
+                  onMenuClick={() => setIsMobileNavOpen(true)}
+                  pendingEnquiries={pendingEnquiries}
+                  onViewEnquiries={() => setAdminTab('enquiries')}
+                  onBackToWebsite={() => handleNavigate('home')}
                 />
 
                 <div className="p-4 pt-6 sm:p-6 md:p-8 max-w-7xl mx-auto w-full">

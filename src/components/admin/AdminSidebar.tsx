@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Logo } from '../common/Logo';
 import {
@@ -11,6 +11,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  Globe,
   X,
 } from 'lucide-react';
 
@@ -23,6 +24,11 @@ interface AdminSidebarProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   pendingEnquiriesCount: number;
+  /** SPA navigation to the public website — no reload, session intact. */
+  onBackToWebsite?: () => void;
+  /** Controlled mobile-drawer open state (owned by App so the navbar hamburger can open it). */
+  mobileOpen: boolean;
+  onMobileOpenChange: (open: boolean) => void;
 }
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
@@ -32,8 +38,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   isCollapsed,
   onToggleCollapse,
   pendingEnquiriesCount,
+  onBackToWebsite,
+  mobileOpen,
+  onMobileOpenChange,
 }) => {
-  const [mobileOpen, setMobileOpen] = useState(false);
   const menuItems = [
     { id: 'dashboard' as AdminTab, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'cars' as AdminTab, label: 'Manage Cars', icon: Car },
@@ -48,25 +56,30 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     { id: 'settings' as AdminTab, label: 'Settings', icon: Settings },
   ];
 
+  // Escape closes the mobile drawer.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onMobileOpenChange(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [mobileOpen, onMobileOpenChange]);
+
   return (
     <>
-      {/* Mobile trigger */}
-      <button
-        onClick={() => setMobileOpen(true)}
-        className="md:hidden fixed top-4 left-4 z-30 w-11 h-11 rounded-xl glass-panel text-neutral-200 shadow-xl flex items-center justify-center"
-        aria-label="Open admin navigation"
-      >
-        <LayoutDashboard className="w-5 h-5" />
-      </button>
-
       {/* Mobile overlay */}
-      <AnimatePresenceDrawer open={mobileOpen} onClose={() => setMobileOpen(false)}>
+      <AnimatePresenceDrawer
+        open={mobileOpen}
+        onClose={() => onMobileOpenChange(false)}
+      >
         <MobileNavContent
           menuItems={menuItems}
           currentTab={currentTab}
           onTabChange={onTabChange}
           onLogout={onLogout}
-          onClose={() => setMobileOpen(false)}
+          onClose={() => onMobileOpenChange(false)}
+          onBackToWebsite={onBackToWebsite}
         />
       </AnimatePresenceDrawer>
 
@@ -142,8 +155,20 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           </nav>
         </div>
 
-        {/* Logout */}
-        <div className="p-3 border-t border-white/[0.06]">
+        {/* Logout + Back to website */}
+        <div className="p-3 border-t border-white/[0.06] space-y-1">
+          {onBackToWebsite && (
+            <button
+              onClick={onBackToWebsite}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider text-neutral-400 hover:text-white hover:bg-white/[0.05] border border-transparent hover:border-white/10 transition-all cursor-pointer ${
+                isCollapsed ? 'justify-center px-0' : ''
+              }`}
+              title="View Website"
+            >
+              <Globe className="w-4 h-4 shrink-0" />
+              {!isCollapsed && <span>View Website</span>}
+            </button>
+          )}
           <button
             onClick={onLogout}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider text-neutral-400 hover:text-white hover:bg-white/[0.05] border border-transparent hover:border-white/10 transition-all cursor-pointer ${
@@ -199,7 +224,8 @@ const MobileNavContent: React.FC<{
   onTabChange: (tab: AdminTab) => void;
   onLogout: () => void;
   onClose: () => void;
-}> = ({ menuItems, currentTab, onTabChange, onLogout, onClose }) => {
+  onBackToWebsite?: () => void;
+}> = ({ menuItems, currentTab, onTabChange, onLogout, onClose, onBackToWebsite }) => {
   return (
     <>
       <div className="p-5 border-b border-white/[0.06] flex items-center justify-between">
@@ -243,7 +269,16 @@ const MobileNavContent: React.FC<{
           );
         })}
       </nav>
-      <div className="p-3 border-t border-white/[0.06]">
+      <div className="p-3 border-t border-white/[0.06] space-y-1">
+        {onBackToWebsite && (
+          <button
+            onClick={onBackToWebsite}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider text-neutral-400 hover:text-white hover:bg-white/[0.05] transition-all cursor-pointer"
+          >
+            <Globe className="w-4 h-4" />
+            <span>Back to Website</span>
+          </button>
+        )}
         <button
           onClick={onLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider text-neutral-400 hover:text-white hover:bg-white/[0.05] transition-all cursor-pointer"
