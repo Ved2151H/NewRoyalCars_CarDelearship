@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { GlassButton } from '../common/GlassButton';
-import { Settings, Shield, Bell, Key, CheckCircle2, Save, Globe, Clock, MapPin, Phone, MessageCircle } from 'lucide-react';
+import { Shield, CheckCircle2, Save, Globe } from 'lucide-react';
 import {
   getDealerSettingsAction,
   saveDealerSettingsAction,
@@ -14,8 +14,6 @@ export const AdminSettings: React.FC = () => {
   const [businessHours, setBusinessHours] = useState('Mon – Sun: 10:00 AM – 8:30 PM');
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [mapsUrl, setMapsUrl] = useState('');
-  const [enableInstantSms, setEnableInstantSms] = useState(true);
-  const [enableEmailAlerts, setEnableEmailAlerts] = useState(true);
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -33,8 +31,6 @@ export const AdminSettings: React.FC = () => {
       setBusinessHours(d.businessHours);
       setWhatsappNumber(d.whatsappNumber);
       setMapsUrl(d.mapsUrl);
-      setEnableInstantSms(d.enableInstantSms);
-      setEnableEmailAlerts(d.enableEmailAlerts);
     });
     return () => {
       active = false;
@@ -54,8 +50,6 @@ export const AdminSettings: React.FC = () => {
         businessHours,
         whatsappNumber,
         mapsUrl,
-        enableInstantSms,
-        enableEmailAlerts,
       });
       if (res.ok) {
         setSaved(true);
@@ -189,42 +183,6 @@ export const AdminSettings: React.FC = () => {
                 onChange={(e) => setMapsUrl(e.target.value)}
                 placeholder="https://maps.google.com/..."
                 className={inputClass}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Lead Notification Workflows */}
-        <div className="p-6 rounded-2xl bg-neutral-900/40 backdrop-blur-xl border border-white/10 shadow-xl space-y-4">
-          <h3 className="text-xs uppercase font-bold tracking-widest text-neutral-400 font-serif flex items-center gap-2">
-            <Bell className="w-4 h-4" />
-            <span>Lead & Notification Automation</span>
-          </h3>
-
-          <div className="space-y-3">
-            <div className="p-3.5 rounded-xl bg-black/40 border border-white/10 flex items-center justify-between">
-              <div>
-                <span className="text-xs font-semibold text-white block">Instant SMS to Duty Manager</span>
-                <span className="text-[11px] text-neutral-400">Trigger immediate SMS whenever a client requests a VIP test drive</span>
-              </div>
-              <input
-                type="checkbox"
-                checked={enableInstantSms}
-                onChange={(e) => setEnableInstantSms(e.target.checked)}
-                className="w-4 h-4 accent-white cursor-pointer"
-              />
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-black/40 border border-white/10 flex items-center justify-between">
-              <div>
-                <span className="text-xs font-semibold text-white block">Daily Morning Fleet Inventory Digest</span>
-                <span className="text-[11px] text-neutral-400">Receive an automated overview of remaining stock, sold tags, and follow-ups</span>
-              </div>
-              <input
-                type="checkbox"
-                checked={enableEmailAlerts}
-                onChange={(e) => setEnableEmailAlerts(e.target.checked)}
-                className="w-4 h-4 accent-white cursor-pointer"
               />
             </div>
           </div>
