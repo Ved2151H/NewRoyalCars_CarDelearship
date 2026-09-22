@@ -4,6 +4,7 @@ import { Car, CarAvailability } from '../../types';
 import { ConfirmationModal } from './ConfirmationModal';
 import { GlassButton } from '../common/GlassButton';
 import { GlassSelect } from '../common/GlassSelect';
+import { formatKm } from '../../lib/utils';
 import {
   Search,
   Plus,
@@ -204,7 +205,7 @@ export const AdminManageCars: React.FC<AdminManageCarsProps> = ({
 
                     {/* KM */}
                     <td className="py-3 px-4 font-mono text-neutral-300">
-                      {car.kmFrom.toLocaleString()} - {car.kmTo.toLocaleString()} km
+                      {formatKm(car.kmFrom)} - {formatKm(car.kmTo)} km
                     </td>
 
                     {/* Price */}

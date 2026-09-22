@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { motion, useMotionValue, useSpring, useTransform } from 'motion/react';
 import { Car } from '../../types';
+import { formatKm } from '../../lib/utils';
 import { ArrowRight, Heart, Users, Snowflake, Gauge } from 'lucide-react';
 
 interface CarCardProps {
@@ -145,7 +146,7 @@ export const CarCard: React.FC<CarCardProps> = ({
         <div className="flex items-center gap-1.5 mt-2 text-[11px] text-neutral-400">
           <Gauge className="w-3.5 h-3.5 text-neutral-500" />
           <span>
-            {car.kmFrom.toLocaleString()} - {car.kmTo.toLocaleString()} km
+            {formatKm(car.kmFrom)} - {formatKm(car.kmTo)} km
           </span>
         </div>
 

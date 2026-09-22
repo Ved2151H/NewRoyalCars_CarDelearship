@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Car } from '../../types';
+import { formatKm } from '../../lib/utils';
 import { GlassButton } from '../common/GlassButton';
 import {
   ChevronLeft,
@@ -51,7 +52,7 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
     {
       icon: <Gauge className="w-4 h-4" />,
       label: 'KM Driven',
-      value: `${car.kmFrom.toLocaleString()} - ${car.kmTo.toLocaleString()} km`,
+      value: `${formatKm(car.kmFrom)} - ${formatKm(car.kmTo)} km`,
     },
     { icon: <Fuel className="w-4 h-4" />, label: 'Fuel Type', value: car.fuel },
     { icon: <Cog className="w-4 h-4" />, label: 'Transmission', value: car.transmission },
