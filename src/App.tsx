@@ -581,7 +581,7 @@ export default function App({
                 <span className="text-neutral-400">Nandu Dhanokar</span>
               </p>
               <span className="text-[9px] text-neutral-700 tracking-wider">
-                version : 3.0
+                version : 4.0
               </span>
             </div>
           </footer>
