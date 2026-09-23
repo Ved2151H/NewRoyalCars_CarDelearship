@@ -28,6 +28,8 @@ interface AdminNavbarProps {
   onViewEnquiries: () => void;
   /** Open Account Management for the signed-in admin. */
   onOpenAccount: () => void;
+  /** Jump to Manage Cars with the search box focused. */
+  onSearchCars: () => void;
   /** SPA navigation back to the public website — no reload, session intact. */
   onBackToWebsite: () => void;
 }
@@ -61,6 +63,7 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({
   pendingEnquiries,
   onViewEnquiries,
   onOpenAccount,
+  onSearchCars,
   onBackToWebsite,
 }) => {
   const [open, setOpen] = useState(false);
@@ -141,9 +144,10 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({
           <Menu className="w-4 h-4" />
         </button>
 
-        {/* Search affordance */}
+        {/* Search — jumps to Manage Cars with the search focused */}
         <button
-          aria-label="Search"
+          onClick={onSearchCars}
+          aria-label="Search cars"
           className="p-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-neutral-400 hover:text-white transition-all cursor-pointer"
         >
           <Search className="w-4 h-4" />

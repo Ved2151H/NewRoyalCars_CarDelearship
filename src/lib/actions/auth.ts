@@ -44,16 +44,16 @@ export async function logoutAction(): Promise<ActionResult> {
  * sensitive data crosses the wire.
  */
 export async function checkSessionAction(): Promise<
-  ActionResult<{ authenticated: boolean; email: string | null }>
+  ActionResult<{ authenticated: boolean; email: string | null; name: string | null }>
 > {
   try {
     const session = await getSession();
     return {
       ok: true,
-      data: { authenticated: Boolean(session), email: session?.email ?? null },
+      data: { authenticated: Boolean(session), email: session?.email ?? null, name: session?.name ?? null },
     };
   } catch (err) {
     console.error('[checkSessionAction]', err);
-    return { ok: true, data: { authenticated: false, email: null } };
+    return { ok: true, data: { authenticated: false, email: null, name: null } };
   }
 }

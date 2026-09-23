@@ -59,6 +59,8 @@ export default function App({
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
   const [adminEmail, setAdminEmail] = useState(initialAdminEmail);
+  /** Display name shown in the navbar — falls back to the email prefix. */
+  const [adminName, setAdminName] = useState('');
 
   const [adminTab, setAdminTab] = useState<AdminTab>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -106,6 +108,7 @@ export default function App({
       if (res.ok && res.data?.authenticated) {
         setIsAdminAuthenticated(true);
         if (res.data.email) setAdminEmail(res.data.email);
+        if (res.data.name) setAdminName(res.data.name);
       }
       setSessionChecked(true);
     });
@@ -414,12 +417,23 @@ export default function App({
                 <AdminNavbar
                   currentTab={adminTab}
                   pendingCount={pendingEnquiriesCount}
-                  adminUsername={adminEmail}
+                  adminUsername={adminName}
                   onLogout={handleLogout}
                   onMenuClick={() => setIsMobileNavOpen(true)}
                   pendingEnquiries={pendingEnquiries}
                   onViewEnquiries={() => setAdminTab('enquiries')}
                   onOpenAccount={() => setAdminTab('account')}
+                  onSearchCars={() => {
+                    setEditingCar(null);
+                    setAdminTab('cars');
+                    // Focus the Manage Cars search box once the tab renders.
+                    setTimeout(() => {
+                      const searchInput = document.querySelector<HTMLInputElement>(
+                        'input[placeholder*="Search by car name"]'
+                      );
+                      searchInput?.focus();
+                    }, 350);
+                  }}
                   onBackToWebsite={() => handleNavigate('home')}
                 />
 
@@ -474,7 +488,12 @@ export default function App({
                   {adminTab === 'trash' && <AdminTrash />}
 
                   {adminTab === 'account' && (
-                    <AdminAccountManagement onSessionRefreshed={(email) => setAdminEmail(email)} />
+                    <AdminAccountManagement
+                      onSessionRefreshed={(email, name) => {
+                        setAdminEmail(email);
+                        if (name) setAdminName(name);
+                      }}
+                    />
                   )}
 
                   {adminTab === 'settings' && <AdminSettings />}
@@ -610,7 +629,7 @@ export default function App({
                 <span className="text-neutral-400">Nandu Dhanokar</span>
               </p>
               <span className="text-[9px] text-neutral-700 tracking-wider">
-                version : 7.3
+                version : 7.4
               </span>
             </div>
           </footer>

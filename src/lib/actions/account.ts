@@ -220,12 +220,11 @@ export async function deleteAdminAction(adminId: string): Promise<ActionResult> 
     const target = await prisma.admin.findUnique({ where: { id: adminId } });
     if (!target) return { ok: false, error: 'Admin account not found.' };
 
-    // Last-super-admin guard.
+    // SUPER_ADMIN accounts are undeletable — the dealership must always retain
+    // its owner-level accounts. Demotion (modifyAdminAction) is the only way
+    // to change a super admin's role, and even that preserves at least one.
     if (target.role === 'SUPER_ADMIN') {
-      const superAdminCount = await prisma.admin.count({ where: { role: 'SUPER_ADMIN' } });
-      if (superAdminCount <= 1) {
-        return { ok: false, error: 'Cannot delete the last remaining SUPER_ADMIN account.' };
-      }
+      return { ok: false, error: 'SUPER_ADMIN accounts cannot be deleted. Demote the account to ADMIN first if it must be removed.' };
     }
 
     await prisma.admin.delete({ where: { id: adminId } });

@@ -8,6 +8,8 @@ import {
   Trash2,
   Pencil,
   Plus,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { GlassButton } from '../common/GlassButton';
 import { ConfirmationModal } from './ConfirmationModal';
@@ -41,7 +43,9 @@ const inputCls =
 
 const labelCls = 'block text-xs text-neutral-300 font-medium mb-1';
 
-export const AdminAccountManagement: React.FC<{ onSessionRefreshed: (email: string) => void }> = ({
+export const AdminAccountManagement: React.FC<{
+  onSessionRefreshed: (email: string, name?: string) => void;
+}> = ({
   onSessionRefreshed,
 }) => {
   const [me, setMe] = useState<MyAccount | null>(null);
@@ -77,6 +81,14 @@ export const AdminAccountManagement: React.FC<{ onSessionRefreshed: (email: stri
 
   const [deleteTarget, setDeleteTarget] = useState<AdminRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Show/hide toggles for every password field.
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [showCreatePw, setShowCreatePw] = useState(false);
+  const [showCreateConfirm, setShowCreateConfirm] = useState(false);
+  const [showEditPw, setShowEditPw] = useState(false);
 
   const isSuper = me?.role === 'SUPER_ADMIN';
 
@@ -125,7 +137,7 @@ export const AdminAccountManagement: React.FC<{ onSessionRefreshed: (email: stri
       setConfirmPassword('');
       await loadAll();
       const meRes = await getMyAccountAction();
-      if (meRes.ok && meRes.data) onSessionRefreshed(meRes.data.email);
+      if (meRes.ok && meRes.data) onSessionRefreshed(meRes.data.email, meRes.data.name);
       flash(
         passwordChanged
           ? 'Password changed. Use your new password next time you sign in.'
@@ -258,35 +270,65 @@ export const AdminAccountManagement: React.FC<{ onSessionRefreshed: (email: stri
           </div>
           <div>
             <label className={labelCls}>Current Password *</label>
-            <input
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              placeholder="Required to save any change"
-              className={inputCls}
-              autoComplete="current-password"
-            />
+            <div className="relative">
+              <input
+                type={showCurrent ? 'text' : 'password'}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Required to save any change"
+                className={inputCls + ' pr-10'}
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrent((v) => !v)}
+                aria-label={showCurrent ? 'Hide password' : 'Show password'}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-neutral-500 hover:text-white transition-colors cursor-pointer"
+              >
+                {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelCls}>New Password</label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className={inputCls}
-                autoComplete="new-password"
-              />
+              <div className="relative">
+                <input
+                  type={showNew ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className={inputCls + ' pr-10'}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNew((v) => !v)}
+                  aria-label={showNew ? 'Hide password' : 'Show password'}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-neutral-500 hover:text-white transition-colors cursor-pointer"
+                >
+                  {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
             <div>
               <label className={labelCls}>Confirm New</label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className={inputCls}
-                autoComplete="new-password"
-              />
+              <div className="relative">
+                <input
+                  type={showConfirm ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className={inputCls + ' pr-10'}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm((v) => !v)}
+                  aria-label={showConfirm ? 'Hide password' : 'Show password'}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-neutral-500 hover:text-white transition-colors cursor-pointer"
+                >
+                  {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -331,11 +373,21 @@ export const AdminAccountManagement: React.FC<{ onSessionRefreshed: (email: stri
                 </div>
                 <div>
                   <label className={labelCls}>Password</label>
-                  <input type="password" value={newPassword2} onChange={(e) => setNewPassword2(e.target.value)} className={inputCls} autoComplete="new-password" />
+                  <div className="relative">
+                    <input type={showCreatePw ? 'text' : 'password'} value={newPassword2} onChange={(e) => setNewPassword2(e.target.value)} className={inputCls + ' pr-10'} autoComplete="new-password" />
+                    <button type="button" onClick={() => setShowCreatePw((v) => !v)} aria-label={showCreatePw ? 'Hide password' : 'Show password'} className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-neutral-500 hover:text-white transition-colors cursor-pointer">
+                      {showCreatePw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className={labelCls}>Confirm Password</label>
-                  <input type="password" value={newConfirm} onChange={(e) => setNewConfirm(e.target.value)} className={inputCls} autoComplete="new-password" />
+                  <div className="relative">
+                    <input type={showCreateConfirm ? 'text' : 'password'} value={newConfirm} onChange={(e) => setNewConfirm(e.target.value)} className={inputCls + ' pr-10'} autoComplete="new-password" />
+                    <button type="button" onClick={() => setShowCreateConfirm((v) => !v)} aria-label={showCreateConfirm ? 'Hide password' : 'Show password'} className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-neutral-500 hover:text-white transition-colors cursor-pointer">
+                      {showCreateConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className={labelCls}>Role</label>
@@ -381,9 +433,11 @@ export const AdminAccountManagement: React.FC<{ onSessionRefreshed: (email: stri
                         <button onClick={() => openEdit(a)} className="p-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-neutral-400 hover:text-white border border-white/10 transition-all cursor-pointer" title="Modify">
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => setDeleteTarget(a)} className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition-all cursor-pointer" title="Delete admin">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {a.role !== 'SUPER_ADMIN' && (
+                          <button onClick={() => setDeleteTarget(a)} className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition-all cursor-pointer" title="Delete admin">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -410,10 +464,12 @@ export const AdminAccountManagement: React.FC<{ onSessionRefreshed: (email: stri
                     <Pencil className="w-3.5 h-3.5" />
                     Modify
                   </GlassButton>
-                  <GlassButton variant="danger" size="sm" onClick={() => setDeleteTarget(a)}>
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Delete
-                  </GlassButton>
+                  {a.role !== 'SUPER_ADMIN' && (
+                    <GlassButton variant="danger" size="sm" onClick={() => setDeleteTarget(a)}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete
+                    </GlassButton>
+                  )}
                 </div>
               </div>
             ))}
@@ -438,7 +494,12 @@ export const AdminAccountManagement: React.FC<{ onSessionRefreshed: (email: stri
               </div>
               <div>
                 <label className={labelCls}>Reset Password (optional)</label>
-                <input type="password" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} placeholder="Leave blank to keep current" className={inputCls} autoComplete="new-password" />
+                <div className="relative">
+                  <input type={showEditPw ? 'text' : 'password'} value={editPassword} onChange={(e) => setEditPassword(e.target.value)} placeholder="Leave blank to keep current" className={inputCls + ' pr-10'} autoComplete="new-password" />
+                  <button type="button" onClick={() => setShowEditPw((v) => !v)} aria-label={showEditPw ? 'Hide password' : 'Show password'} className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-neutral-500 hover:text-white transition-colors cursor-pointer">
+                    {showEditPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
               <div>
                 <label className={labelCls}>Role</label>
