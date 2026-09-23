@@ -227,6 +227,7 @@ export const AdminTrash: React.FC = () => {
                     <img
                       src={item.imageUrl}
                       alt={item.name}
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
                       className="w-full h-full object-cover"
                       loading="lazy"
                     />

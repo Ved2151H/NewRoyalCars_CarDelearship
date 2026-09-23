@@ -33,9 +33,6 @@ interface PhotoItem {
   publicId: string | null;
 }
 
-const PLACEHOLDER_IMAGE =
-  'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=1400&q=80';
-
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 const MAX_FILE_MB = 10;
 const MAX_PHOTOS = 10;
@@ -74,8 +71,10 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
 
   const [photos, setPhotos] = useState<PhotoItem[]>(() => {
     if (!initialCar) return [];
-    const isPlaceholder = initialCar.images.length === 1 && initialCar.images[0].includes('unsplash');
-    if (isPlaceholder) return [];
+    // Legacy single Unsplash placeholder images are treated as "no photos".
+    const isLegacyPlaceholder =
+      initialCar.images.length === 1 && initialCar.images[0].includes('unsplash');
+    if (isLegacyPlaceholder) return [];
     return initialCar.images.map((url) => ({ url, publicId: null }));
   });
   const [imageUrlInput, setImageUrlInput] = useState('');
@@ -265,7 +264,7 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
       transmission,
       year: numericYear,
       availability,
-      images: photos.length > 0 ? photos.map((p) => p.url) : [PLACEHOLDER_IMAGE],
+      images: photos.map((p) => p.url),
       description: description.trim(),
       features: featuresList,
       color: color.trim() || 'Not specified',

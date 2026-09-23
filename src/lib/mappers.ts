@@ -26,12 +26,10 @@ export function fromAvailability(a: CarAvailability): 'AVAILABLE' | 'UNAVAILABLE
 
 type CarWithImages = Prisma.CarGetPayload<{ include: { images: true } }>;
 
-const FALLBACK_IMAGE =
-  'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=1400&q=80';
-
 export function mapCar(car: CarWithImages): Car {
   const sortedImages = [...car.images].sort((a, b) => a.sortOrder - b.sortOrder);
-  const imageUrls = sortedImages.length > 0 ? sortedImages.map((i) => i.imageUrl) : [FALLBACK_IMAGE];
+  // No fallback image: a car without photos simply has an empty list and the
+  // UI renders a clean empty image area instead of a fake vehicle picture.
 
   return {
     id: car.id,
@@ -49,7 +47,7 @@ export function mapCar(car: CarWithImages): Car {
     transmission: car.transmission as TransmissionType,
     year: car.year,
     availability: toAvailability(car.status),
-    images: imageUrls,
+    images: sortedImages.map((i) => i.imageUrl),
     description: car.description ?? '',
     features: car.features,
     color: car.color ?? 'Not specified',

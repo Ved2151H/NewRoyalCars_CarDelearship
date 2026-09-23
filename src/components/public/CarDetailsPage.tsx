@@ -93,16 +93,19 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
           {/* Main image */}
           <div className="relative h-72 sm:h-96 lg:h-[420px] rounded-2xl overflow-hidden glass-card group">
             <AnimatePresence mode="wait">
-              <motion.img
-                key={activeImageIndex}
-                initial={{ opacity: 0, scale: 1.05, filter: 'blur(8px)' }}
-                animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, scale: 0.98, filter: 'blur(5px)' }}
-                transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-                src={car.images[activeImageIndex] || car.images[0]}
-                alt={`${car.name} — view ${activeImageIndex + 1}`}
-                className="absolute inset-0 w-full h-full object-cover object-center"
-              />
+              {car.images.length > 0 && (
+                <motion.img
+                  key={activeImageIndex}
+                  initial={{ opacity: 0, scale: 1.05, filter: 'blur(8px)' }}
+                  animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                  exit={{ opacity: 0, scale: 0.98, filter: 'blur(5px)' }}
+                  transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                  src={car.images[activeImageIndex] || car.images[0]}
+                  alt={`${car.name} — view ${activeImageIndex + 1}`}
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  className="absolute inset-0 w-full h-full object-cover object-center"
+                />
+              )}
             </AnimatePresence>
 
             {/* Grade */}
@@ -146,9 +149,11 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
             )}
 
             {/* Counter */}
-            <div className="absolute bottom-3 right-4 px-2.5 py-1 rounded-md bg-black/65 backdrop-blur-md text-xs font-mono text-neutral-200 border border-white/10">
-              {activeImageIndex + 1} / {car.images.length}
-            </div>
+            {car.images.length > 0 && (
+              <div className="absolute bottom-3 right-4 px-2.5 py-1 rounded-md bg-black/65 backdrop-blur-md text-xs font-mono text-neutral-200 border border-white/10">
+                {activeImageIndex + 1} / {car.images.length}
+              </div>
+            )}
           </div>
 
           {/* Thumbnails */}
@@ -165,7 +170,12 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
                     : 'border-white/10 opacity-60 hover:opacity-100'
                 }`}
               >
-                <img src={img} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
+                <img
+                  src={img}
+                  alt={`Thumbnail ${idx + 1}`}
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  className="w-full h-full object-cover"
+                />
               </motion.button>
             ))}
           </div>
@@ -351,6 +361,7 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
                     <img
                       src={img}
                       alt={`Gallery image ${idx + 1}`}
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors duration-300" />

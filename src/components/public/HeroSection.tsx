@@ -9,9 +9,6 @@ interface HeroSectionProps {
   featuredCarImage?: string | null;
 }
 
-const DEFAULT_HERO_IMAGE =
-  'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=1600&q=90';
-
 export const HeroSection: React.FC<HeroSectionProps> = ({
   onBrowseCars,
   onContactUs,
@@ -52,7 +49,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     mouseY.set(0);
   };
 
-  const heroImage = featuredCarImage || DEFAULT_HERO_IMAGE;
+  // No fallback: when no car image exists the hero renders its glass frame empty.
+  const heroImage = featuredCarImage || null;
   const headlineWords = ['Drive', 'Your', 'Dream', 'Today'];
 
   return (
@@ -172,12 +170,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               {/* Floor reflection glow */}
               <div className="absolute inset-x-8 bottom-0 h-24 bg-white/[0.05] blur-[70px] rounded-full pointer-events-none" />
 
-              <div className="relative overflow-hidden rounded-2xl border border-white/10 shadow-[0_40px_100px_rgba(0,0,0,0.85)] group">
-                <img
-                  src={heroImage}
-                  alt="New Royal Cars premium fleet"
-                  className="w-full h-[260px] sm:h-[380px] lg:h-[440px] object-cover object-center grayscale-[0.35] transition-transform duration-[1.2s] ease-out group-hover:scale-105"
-                />
+              <div className="relative overflow-hidden rounded-2xl border border-white/10 shadow-[0_40px_100px_rgba(0,0,0,0.85)] group bg-[#0a0c0d]">
+                {heroImage && (
+                  <img
+                    src={heroImage}
+                    alt="New Royal Cars premium fleet"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    className="w-full h-[260px] sm:h-[380px] lg:h-[440px] object-cover object-center grayscale-[0.35] transition-transform duration-[1.2s] ease-out group-hover:scale-105"
+                  />
+                )}
 
                 {/* Cinematic grade overlays */}
                 <div className="absolute inset-0 bg-gradient-to-t from-[#050607] via-transparent to-[#050607]/30 pointer-events-none" />

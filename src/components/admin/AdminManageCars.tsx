@@ -169,11 +169,16 @@ export const AdminManageCars: React.FC<AdminManageCarsProps> = ({
                     {/* Car Image + Name */}
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        <img
-                          src={car.images[0]}
-                          alt={car.name}
-                          className="w-14 h-11 object-cover rounded-lg border border-white/10 shrink-0"
-                        />
+                        {car.images.length > 0 ? (
+                          <img
+                            src={car.images[0]}
+                            alt={car.name}
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            className="w-14 h-11 object-cover rounded-lg border border-white/10 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-14 h-11 rounded-lg border border-white/10 bg-black/40 shrink-0" />
+                        )}
                         <div>
                           <div className="font-bold text-white group-hover:text-white transition-colors text-sm">
                             {car.name}

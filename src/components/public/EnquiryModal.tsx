@@ -108,11 +108,16 @@ const EnquiryForm: React.FC<{
               transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
               className="mb-5 p-3 rounded-xl bg-black/50 border border-white/10 flex items-center gap-3"
             >
-              <img
-                src={car.images[0]}
-                alt={car.name}
-                className="w-14 h-11 object-cover rounded-lg border border-white/10"
-              />
+              {car.images.length > 0 ? (
+                <img
+                  src={car.images[0]}
+                  alt={car.name}
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  className="w-14 h-11 object-cover rounded-lg border border-white/10"
+                />
+              ) : (
+                <div className="w-14 h-11 rounded-lg border border-white/10 bg-black/40 shrink-0" />
+              )}
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-semibold text-white truncate">{car.name}</div>
                 <div className="text-[11px] text-neutral-400 font-mono">

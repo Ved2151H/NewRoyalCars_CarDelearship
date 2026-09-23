@@ -99,12 +99,15 @@ export const CarCard: React.FC<CarCardProps> = ({
         style={{ x: imageX, y: imageY, transform: 'translateZ(18px)' }}
         className="relative h-48 sm:h-52 overflow-hidden"
       >
-        <img
-          src={car.images[0]}
-          alt={car.name}
-          loading="lazy"
-          className="w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-[1.06]"
-        />
+        {car.images.length > 0 && (
+          <img
+            src={car.images[0]}
+            alt={car.name}
+            loading="lazy"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            className="w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-[1.06]"
+          />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0c0d] via-transparent to-transparent pointer-events-none" />
 
         {/* Favorite heart */}
