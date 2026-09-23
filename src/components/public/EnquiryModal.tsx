@@ -159,7 +159,7 @@ const EnquiryForm: React.FC<{
                 <input
                   type="tel"
                   required
-                  placeholder="+91 98200 00000"
+                  placeholder="+91 XXX"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-black/50 border border-white/10 text-white placeholder-neutral-500 text-sm focus:outline-none focus:border-white/60 transition-colors"
