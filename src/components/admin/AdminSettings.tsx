@@ -14,6 +14,8 @@ export const AdminSettings: React.FC = () => {
   const [businessHours, setBusinessHours] = useState('Mon – Sun: 10:00 AM – 8:30 PM');
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [mapsUrl, setMapsUrl] = useState('');
+  const [enableInstantSms, setEnableInstantSms] = useState(true);
+  const [enableEmailAlerts, setEnableEmailAlerts] = useState(true);
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -31,6 +33,8 @@ export const AdminSettings: React.FC = () => {
       setBusinessHours(d.businessHours);
       setWhatsappNumber(d.whatsappNumber);
       setMapsUrl(d.mapsUrl);
+      setEnableInstantSms(d.enableInstantSms);
+      setEnableEmailAlerts(d.enableEmailAlerts);
     });
     return () => {
       active = false;
@@ -50,6 +54,8 @@ export const AdminSettings: React.FC = () => {
         businessHours,
         whatsappNumber,
         mapsUrl,
+        enableInstantSms,
+        enableEmailAlerts,
       });
       if (res.ok) {
         setSaved(true);
@@ -119,6 +125,7 @@ export const AdminSettings: React.FC = () => {
                 type="text"
                 value={contactPhone}
                 onChange={(e) => setContactPhone(e.target.value)}
+                placeholder="+91 XXXXXXXXXX"
                 className={`${inputClass} font-mono`}
               />
             </div>
@@ -143,7 +150,7 @@ export const AdminSettings: React.FC = () => {
                 type="text"
                 value={whatsappNumber}
                 onChange={(e) => setWhatsappNumber(e.target.value)}
-                placeholder="+91 98200 00000"
+                placeholder="+91 XXXXXXXXXX"
                 className={`${inputClass} font-mono`}
               />
             </div>
