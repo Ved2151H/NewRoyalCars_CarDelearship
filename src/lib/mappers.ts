@@ -53,9 +53,6 @@ export function mapCar(car: CarWithImages): Car {
     description: car.description ?? '',
     features: car.features,
     color: car.color ?? 'Not specified',
-    engine: car.engine ?? 'Not specified',
-    insuranceValidity: car.insuranceValidity ?? 'Not specified',
-    registrationRTO: car.registrationRTO ?? 'Not specified',
     featured: car.status === 'AVAILABLE',
   };
 }

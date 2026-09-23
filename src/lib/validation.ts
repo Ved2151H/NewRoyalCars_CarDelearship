@@ -43,9 +43,6 @@ export const carInputSchema = z.object({
   status: carStatusSchema,
   features: z.array(z.string().trim().min(1).max(60)).max(20).default([]),
   color: z.string().trim().max(40).optional().or(z.literal('')),
-  engine: z.string().trim().max(60).optional().or(z.literal('')),
-  insuranceValidity: z.string().trim().max(40).optional().or(z.literal('')),
-  registrationRTO: z.string().trim().max(40).optional().or(z.literal('')),
 })
   .refine((d) => d.kmTo >= d.kmFrom, {
     message: 'KM (To) must be ≥ KM (From)',

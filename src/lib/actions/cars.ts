@@ -93,9 +93,6 @@ export async function saveCarAction(
       status: data.status,
       features: data.features,
       color: data.color || null,
-      engine: data.engine || null,
-      insuranceValidity: data.insuranceValidity || null,
-      registrationRTO: data.registrationRTO || null,
     };
 
     const { urls: imageUrls, publicIds: imagePublicIds } = parseImageList(formData);

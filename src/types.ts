@@ -22,9 +22,6 @@ export interface Car {
   description: string;
   features: string[];
   color: string;
-  engine: string;
-  insuranceValidity: string;
-  registrationRTO: string;
   featured?: boolean;
 }
 

@@ -63,9 +63,6 @@ model Car {
   status      CarStatus @default(AVAILABLE)
   features    String[]  @default([])
   color       String?
-  engine      String?
-  insuranceValidity String?
-  registrationRTO   String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   /** Soft-delete timestamp — set when moved to Trash; null = active. */

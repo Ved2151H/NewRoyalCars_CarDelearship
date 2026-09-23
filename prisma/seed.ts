@@ -27,9 +27,6 @@ const DEMO_CARS = [
       'Single-owner Creta SX in showroom condition. Full service history at authorised Hyundai service centers, new tyres fitted at 42,000 km.',
     features: ['Electric Sunroof', 'Cruise Control', 'Wireless Charging', '6 Airbags'],
     color: 'Phantom Black',
-    engine: '1.5L MPi (115 PS)',
-    insuranceValidity: 'November 2026',
-    registrationRTO: 'MH-20 (Aurangabad)',
     status: 'AVAILABLE' as const,
     images: [
       'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?auto=format&fit=crop&w=1600&q=80',
@@ -53,9 +50,6 @@ const DEMO_CARS = [
       'Peppy city hatchback with excellent fuel economy. Non-smoker car, all four alloys original, zero accident history.',
     features: ['Touchscreen Infotainment', 'Rear Parking Camera', 'LED DRLs'],
     color: 'Pearl Arctic White',
-    engine: '1.2L DualJet (90 PS)',
-    insuranceValidity: 'August 2026',
-    registrationRTO: 'MH-12 (Pune)',
     status: 'AVAILABLE' as const,
     images: [
       'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=1600&q=80',
@@ -78,9 +72,6 @@ const DEMO_CARS = [
       'The undisputed family MPV. Second owner, chauffeur-driven, complete Toyota service booklet. Seats eight in absolute comfort.',
     features: ['7-Seater Captain Seats', 'Rear AC Vents', 'Alloy Wheels', 'Touchscreen'],
     color: 'Super White',
-    engine: '2.4L GD Diesel (150 PS)',
-    insuranceValidity: 'March 2026',
-    registrationRTO: 'MH-14 (Pune)',
     status: 'AVAILABLE' as const,
     images: [
       'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1600&q=80',
@@ -103,9 +94,6 @@ const DEMO_CARS = [
       'Top-trim City ZX with Honda Sensing suite. CVT gearbox is buttery smooth in traffic. Lady-driven, garaged parking.',
     features: ['Honda Sensing ADAS', 'Leather Seats', 'Sunroof', '8-Speaker Audio'],
     color: 'Radiant Red Metallic',
-    engine: '1.5L i-VTEC (121 PS)',
-    insuranceValidity: 'July 2026',
-    registrationRTO: 'MH-01 (Mumbai)',
     status: 'AVAILABLE' as const,
     images: [
       'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1600&q=80',
@@ -128,9 +116,6 @@ const DEMO_CARS = [
       'GT trim with the 1.5 TSI EVO and DSG. Barely run-in at 19,000 km. German build quality, exceptional highway manners.',
     features: ['1.5 TSI EVO', 'DSG Gearbox', 'Digital Cockpit', 'Ventilated Seats'],
     color: 'Curcuma Yellow',
-    engine: '1.5L TSI EVO (150 PS)',
-    insuranceValidity: 'September 2026',
-    registrationRTO: 'MH-04 (Thane)',
     status: 'AVAILABLE' as const,
     images: [
       'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1600&q=80',
@@ -153,9 +138,6 @@ const DEMO_CARS = [
       'Slavia Style trim. Spacious rear bench and cavernous 521L boot. Balanced ride tuned for Indian roads.',
     features: ['Electric Sunroof', 'MySkoda Connected Car', 'Cruise Control'],
     color: 'Crystal Blue',
-    engine: '1.0L TSI (115 PS)',
-    insuranceValidity: 'January 2027',
-    registrationRTO: 'MH-03 (Mumbai EZ)',
     status: 'AVAILABLE' as const,
     images: [
       'https://images.unsplash.com/photo-1494905998402-395d579af36f?auto=format&fit=crop&w=1600&q=80',
@@ -178,9 +160,6 @@ const DEMO_CARS = [
       'Diesel-automatic Seltos HTX with the 1.5 CRDi. Feature-loaded cabin with Bose audio and ventilated front seats.',
     features: ['Bose Sound', 'Ventilated Seats', '360 Camera', 'Blue Link'],
     color: 'Intense Red',
-    engine: '1.5L CRDi VGT (115 PS)',
-    insuranceValidity: 'April 2026',
-    registrationRTO: 'MH-43 (Navi Mumbai)',
     status: 'AVAILABLE' as const,
     images: [
       'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&w=1600&q=80',
@@ -203,9 +182,6 @@ const DEMO_CARS = [
       'Flagship AX7 with AdrenoX, panoramic sunroof and AWD. Service done at 40,000 km. Absolute road presence.',
     features: ['Panoramic Sunroof', 'AdrenoX AI', 'Sony 3D Audio', 'ADAS'],
     color: 'Everest White',
-    engine: '2.2L mHawk Diesel (185 PS)',
-    insuranceValidity: 'June 2026',
-    registrationRTO: 'MH-02 (Mumbai CZ)',
     status: 'AVAILABLE' as const,
     images: [
       'https://images.unsplash.com/photo-1592198084033-aade902d1aae?auto=format&fit=crop&w=1600&q=80',
@@ -228,9 +204,6 @@ const DEMO_CARS = [
       'Nearly new Nexon EV Max with genuine 8k km. 437 km ARAI range, fast charging capable, battery warranty transfers to new owner.',
     features: ['437 km Range', 'Fast Charging', 'Ziptron Tech', 'Sunroof'],
     color: 'Pristine Blue',
-    engine: 'PMS Electric Motor (143 PS)',
-    insuranceValidity: 'October 2026',
-    registrationRTO: 'MH-12 (Pune)',
     status: 'AVAILABLE' as const,
     images: [
       'https://images.unsplash.com/photo-1560958089-b8a1929cea89?auto=format&fit=crop&w=1600&q=80',
@@ -253,9 +226,6 @@ const DEMO_CARS = [
       'Budget commuter option. AC compressor needs attention — priced accordingly. Ideal first car or fleet addition.',
     features: ['Power Steering', 'Front Power Windows'],
     color: 'Silky Silver',
-    engine: '1.2L K-Series (83 PS)',
-    insuranceValidity: 'February 2026',
-    registrationRTO: 'MH-15 (Nashik)',
     status: 'UNAVAILABLE' as const,
     images: [
       'https://images.unsplash.com/photo-1502877338535-766e1452684a?auto=format&fit=crop&w=1600&q=80',
@@ -306,9 +276,6 @@ async function main() {
         description: car.description,
         features: car.features,
         color: car.color,
-        engine: car.engine,
-        insuranceValidity: car.insuranceValidity,
-        registrationRTO: car.registrationRTO,
         status: car.status,
         images: {
           create: car.images.map((imageUrl, i) => ({

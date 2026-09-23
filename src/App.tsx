@@ -215,9 +215,6 @@ export default function App({
             : 'AVAILABLE',
         features: car.features,
         color: car.color === 'Not specified' ? '' : car.color,
-        engine: car.engine === 'Not specified' ? '' : car.engine,
-        insuranceValidity: car.insuranceValidity === 'Not specified' ? '' : car.insuranceValidity,
-        registrationRTO: car.registrationRTO === 'Not specified' ? '' : car.registrationRTO,
       }));
       fd.set('imageUrls', JSON.stringify(imageUrls));
       fd.set('imagePublicIds', JSON.stringify(imagePublicIds ?? {}));
@@ -629,7 +626,7 @@ export default function App({
                 <span className="text-neutral-400">Nandu Dhanokar</span>
               </p>
               <span className="text-[9px] text-neutral-700 tracking-wider">
-                version : 7.4
+                version : 7.5
               </span>
             </div>
           </footer>

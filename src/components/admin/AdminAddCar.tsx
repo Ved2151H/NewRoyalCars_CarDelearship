@@ -67,11 +67,6 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
   );
   const [description, setDescription] = useState(initialCar?.description || '');
   const [color, setColor] = useState(initialCar?.color || '');
-  const [engine, setEngine] = useState(initialCar?.engine || '');
-  const [insuranceValidity, setInsuranceValidity] = useState(
-    initialCar?.insuranceValidity || ''
-  );
-  const [registrationRTO, setRegistrationRTO] = useState(initialCar?.registrationRTO || '');
 
   // Features
   const [featuresList, setFeaturesList] = useState<string[]>(initialCar?.features || []);
@@ -274,9 +269,6 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
       description: description.trim(),
       features: featuresList,
       color: color.trim() || 'Not specified',
-      engine: engine.trim() || 'Not specified',
-      insuranceValidity: insuranceValidity.trim() || 'Not specified',
-      registrationRTO: registrationRTO.trim() || 'Not specified',
       featured: initialCar ? initialCar.featured : true,
     };
 
@@ -607,46 +599,6 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
               />
             </div>
 
-            {/* Engine Specification — desktop/tablet only (hidden on mobile) */}
-            <div className="hidden sm:block">
-              <label className="block text-xs text-neutral-300 font-medium mb-1">
-                Engine Specification
-              </label>
-              <input
-                type="text"
-                value={engine}
-                onChange={(e) => setEngine(e.target.value)}
-                placeholder="e.g. 1.5L MPi (115 PS)"
-                className="w-full px-3 py-2 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:outline-none focus:border-white/60"
-              />
-            </div>
-
-            {/* Insurance Validity — desktop/tablet only (hidden on mobile) */}
-            <div className="hidden sm:block">
-              <label className="block text-xs text-neutral-300 font-medium mb-1">
-                Insurance Validity
-              </label>
-              <input
-                type="text"
-                value={insuranceValidity}
-                onChange={(e) => setInsuranceValidity(e.target.value)}
-                placeholder="e.g. November 2026"
-                className="w-full px-3 py-2 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:outline-none focus:border-white/60"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-neutral-300 font-medium mb-1">
-                RTO / Registration
-              </label>
-              <input
-                type="text"
-                value={registrationRTO}
-                onChange={(e) => setRegistrationRTO(e.target.value)}
-                placeholder="e.g. MH-20 (Aurangabad)"
-                className="w-full px-3 py-2 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:outline-none focus:border-white/60"
-              />
-            </div>
           </div>
         </div>
 
