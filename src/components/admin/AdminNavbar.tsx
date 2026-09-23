@@ -8,6 +8,7 @@ import {
   ChevronDown,
   LogOut,
   User,
+  UserCog,
   Menu,
   Globe,
   MessageSquare,
@@ -25,6 +26,8 @@ interface AdminNavbarProps {
   pendingEnquiries: Enquiry[];
   /** Navigate to the Enquiries tab (optionally focused on one enquiry). */
   onViewEnquiries: () => void;
+  /** Open Account Management for the signed-in admin. */
+  onOpenAccount: () => void;
   /** SPA navigation back to the public website — no reload, session intact. */
   onBackToWebsite: () => void;
 }
@@ -57,6 +60,7 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({
   onMenuClick,
   pendingEnquiries,
   onViewEnquiries,
+  onOpenAccount,
   onBackToWebsite,
 }) => {
   const [open, setOpen] = useState(false);
@@ -120,7 +124,9 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({
     'add-car': 'Add Car',
     enquiries: 'Enquiries',
     customers: 'Customers',
+    trash: 'Trash',
     settings: 'Settings',
+    account: 'Account Management',
   };
 
   return (
@@ -258,15 +264,22 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({
           </AnimatePresence>
         </div>
 
-        {/* Admin profile */}
+        {/* Admin profile — click to open Account Management */}
         <div className="flex items-center gap-3 pl-3 border-l border-white/10">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-neutral-200 to-neutral-500 flex items-center justify-center text-black font-bold text-xs shadow-md uppercase">
-            <User className="w-4 h-4" />
-          </div>
-          <div className="hidden sm:block text-left text-xs">
-            <span className="text-white font-semibold block capitalize">{adminUsername}</span>
-            <span className="text-[10px] text-neutral-500">admin@newroyalcars.com</span>
-          </div>
+          <button
+            onClick={onOpenAccount}
+            className="flex items-center gap-3 group cursor-pointer"
+            title="Account Management"
+            aria-label="Open Account Management"
+          >
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-neutral-200 to-neutral-500 flex items-center justify-center text-black font-bold text-xs shadow-md uppercase">
+              <User className="w-4 h-4" />
+            </div>
+            <div className="hidden sm:block text-left text-xs">
+              <span className="text-white font-semibold block capitalize group-hover:text-neutral-300 transition-colors">{adminUsername}</span>
+              <span className="text-[10px] text-neutral-500">Account Management</span>
+            </div>
+          </button>
           <button
             onClick={onLogout}
             className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-neutral-400 hover:text-white border border-white/10 transition-all cursor-pointer"

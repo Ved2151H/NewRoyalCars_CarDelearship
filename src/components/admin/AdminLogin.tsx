@@ -228,7 +228,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onBackToSite,
             className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-white transition-colors cursor-pointer group"
           >
             <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
-            <span>Back to Showroom</span>
+            <span>Back to Dealership</span>
           </button>
         </motion.div>
       </motion.div>

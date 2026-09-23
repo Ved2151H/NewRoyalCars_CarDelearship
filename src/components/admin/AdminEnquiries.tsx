@@ -96,7 +96,7 @@ export const AdminEnquiries: React.FC<AdminEnquiriesProps> = ({
           <h3 className="font-serif text-2xl font-bold text-white mb-2">No Enquiries Yet</h3>
           <p className="text-sm text-neutral-400 max-w-md mx-auto mb-2">
             Your inbox is clean — no sample enquiries, no seeded records. Real customer
-            submissions from the public showroom appear here instantly.
+            submissions from the public dealership appear here instantly.
           </p>
           <p className="text-xs text-neutral-500">
             Try the &ldquo;Contact Us&rdquo; button on the public site to file the first enquiry.

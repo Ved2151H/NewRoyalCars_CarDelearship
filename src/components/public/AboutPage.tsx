@@ -11,7 +11,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onExploreCars }) => {
     {
       icon: <ShieldCheck className="w-5 h-5" />,
       title: 'Certified Quality',
-      desc: 'Every car passes a rigorous multi-point inspection before it earns a place in our showroom.',
+      desc: 'Every car passes a rigorous multi-point inspection before it earns a place in our dealership.',
     },
     {
       icon: <HeartHandshake className="w-5 h-5" />,
@@ -38,7 +38,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onExploreCars }) => {
           Driven by <span className="silver-gradient-text italic">Trust</span>, Defined by Quality
         </h1>
         <p className="mt-5 text-sm sm:text-base text-neutral-400 leading-relaxed">
-          New Royal Cars is a premium pre-owned automotive showroom built on a simple promise —
+          New Royal Cars is a premium pre-owned automotive dealership built on a simple promise —
           quality cars, trusted deals, and a better tomorrow. Every vehicle we list is inspected,
           verified, and presented with complete transparency.
         </p>

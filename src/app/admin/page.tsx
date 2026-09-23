@@ -25,5 +25,5 @@ export default async function AdminPage() {
     console.error('[AdminPage] database fetch failed:', err);
   }
 
-  return <App initialCars={cars} initialBrands={brands} adminEmail={adminEmail} dealershipPhone={dealershipPhone} />;
+  return <App initialCars={cars} initialBrands={brands} initialAdminEmail={adminEmail} dealershipPhone={dealershipPhone} />;
 }

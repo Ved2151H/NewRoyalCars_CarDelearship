@@ -18,12 +18,12 @@ export async function getDashboardStatsAction(): Promise<ActionResult<DashboardS
     await requireAdmin();
 
     const [totalCars, available, sold, unavailable, acCars, totalEnquiries] = await Promise.all([
-      prisma.car.count(),
-      prisma.car.count({ where: { status: 'AVAILABLE' } }),
-      prisma.car.count({ where: { status: 'SOLD' } }),
-      prisma.car.count({ where: { status: 'UNAVAILABLE' } }),
-      prisma.car.count({ where: { acAvailable: true } }),
-      prisma.enquiry.count(),
+      prisma.car.count({ where: { deletedAt: null } }),
+      prisma.car.count({ where: { status: 'AVAILABLE', deletedAt: null } }),
+      prisma.car.count({ where: { status: 'SOLD', deletedAt: null } }),
+      prisma.car.count({ where: { status: 'UNAVAILABLE', deletedAt: null } }),
+      prisma.car.count({ where: { acAvailable: true, deletedAt: null } }),
+      prisma.enquiry.count({ where: { deletedAt: null } }),
     ]);
 
     return {

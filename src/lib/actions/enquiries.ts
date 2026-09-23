@@ -41,7 +41,7 @@ export async function submitEnquiryAction(
     let carId: string | null = null;
     if (data.carId && data.carId !== 'general') {
       const car = await prisma.car.findUnique({ where: { id: data.carId }, select: { id: true } });
-      if (!car) return { ok: false, error: 'This vehicle is no longer listed. Please browse the showroom again.' };
+      if (!car) return { ok: false, error: 'This vehicle is no longer listed. Please browse the dealership again.' };
       carId = car.id;
     }
 
@@ -89,6 +89,7 @@ export async function getEnquiriesAction(): Promise<ActionResult<Enquiry[]>> {
   try {
     await requireAdmin();
     const rows = await prisma.enquiry.findMany({
+      where: { deletedAt: null },
       include: { car: true },
       orderBy: { createdAt: 'desc' },
     });
@@ -133,7 +134,11 @@ export async function deleteEnquiryAction(enquiryId: string): Promise<ActionResu
     const parsed = enquiryDeleteSchema.safeParse({ enquiryId });
     if (!parsed.success) return { ok: false, error: 'Invalid request.' };
 
-    await prisma.enquiry.delete({ where: { id: parsed.data.enquiryId } });
+    // Soft delete: move to Trash.
+    await prisma.enquiry.update({
+      where: { id: parsed.data.enquiryId },
+      data: { deletedAt: new Date() },
+    });
     revalidatePath('/admin');
     return { ok: true };
   } catch (err) {

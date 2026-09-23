@@ -205,7 +205,7 @@ export const AdminCustomers: React.FC<AdminCustomersProps> = ({ enquiries }) => 
           <h3 className="font-serif text-2xl font-bold text-white mb-2">No Customers Yet</h3>
           <p className="text-sm text-neutral-400 mb-2">
             Your patron registry is empty. Customer profiles appear here automatically as enquiries
-            arrive through the public showroom.
+            arrive through the public dealership.
           </p>
           <p className="text-xs text-neutral-500 flex items-center justify-center gap-2">
             <MessageSquare className="w-3.5 h-3.5" />

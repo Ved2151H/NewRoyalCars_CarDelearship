@@ -26,5 +26,5 @@ export default async function HomePage() {
     console.error('[HomePage] database fetch failed:', err);
   }
 
-  return <App initialCars={cars} initialBrands={brands} adminEmail={adminEmail} dealershipPhone={dealershipPhone} />;
+  return <App initialCars={cars} initialBrands={brands} initialAdminEmail={adminEmail} dealershipPhone={dealershipPhone} />;
 }

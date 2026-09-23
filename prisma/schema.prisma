@@ -68,6 +68,8 @@ model Car {
   registrationRTO   String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  /** Soft-delete timestamp — set when moved to Trash; null = active. */
+  deletedAt   DateTime?
 
   images    CarImage[]
   enquiries Enquiry[]
@@ -110,6 +112,8 @@ model Enquiry {
   preferredDate DateTime?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+  /** Soft-delete timestamp — set when moved to Trash; null = active. */
+  deletedAt    DateTime?
 
   car        Car?      @relation(fields: [carId], references: [id], onDelete: SetNull)
   customerId String?

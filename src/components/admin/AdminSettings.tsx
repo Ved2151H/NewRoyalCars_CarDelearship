@@ -107,7 +107,7 @@ export const AdminSettings: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs text-neutral-300 font-medium mb-1">
-                Showroom Brand Name
+                Dealership Brand Name
               </label>
               <input
                 type="text"
@@ -157,7 +157,7 @@ export const AdminSettings: React.FC = () => {
 
             <div className="sm:col-span-2">
               <label className="block text-xs text-neutral-300 font-medium mb-1">
-                Flagship Gallery Address
+                Dealership Address
               </label>
               <input
                 type="text"

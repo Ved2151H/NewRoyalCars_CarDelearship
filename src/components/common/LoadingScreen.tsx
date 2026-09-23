@@ -63,7 +63,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onFinish, duration
 
         {/* Loading percentage */}
         <div className="mt-3 flex items-center justify-between w-64 text-[10px] text-neutral-500 tracking-[0.2em]">
-          <span>INITIALIZING SHOWROOM</span>
+          <span>INITIALIZING DEALERSHIP</span>
           <span className="text-neutral-300">{Math.min(progress, 100)}%</span>
         </div>
       </div>

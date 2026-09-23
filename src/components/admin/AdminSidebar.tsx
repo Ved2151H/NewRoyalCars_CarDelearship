@@ -8,6 +8,8 @@ import {
   MessageSquare,
   Users,
   Settings,
+  Trash2,
+  UserCog,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -15,7 +17,7 @@ import {
   X,
 } from 'lucide-react';
 
-export type AdminTab = 'dashboard' | 'cars' | 'add-car' | 'enquiries' | 'customers' | 'settings';
+export type AdminTab = 'dashboard' | 'cars' | 'add-car' | 'enquiries' | 'customers' | 'settings' | 'trash' | 'account';
 
 interface AdminSidebarProps {
   currentTab: AdminTab;
@@ -53,7 +55,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       badge: pendingEnquiriesCount > 0 ? pendingEnquiriesCount : undefined,
     },
     { id: 'customers' as AdminTab, label: 'Customers', icon: Users },
+    { id: 'trash' as AdminTab, label: 'Trash', icon: Trash2 },
     { id: 'settings' as AdminTab, label: 'Settings', icon: Settings },
+    { id: 'account' as AdminTab, label: 'Account Management', icon: UserCog },
   ];
 
   // Escape closes the mobile drawer.

@@ -105,7 +105,7 @@ export const CarsPage: React.FC<CarsPageProps> = ({
               <CarIcon className="w-8 h-8 text-neutral-400" />
             </div>
             <h3 className="font-serif text-2xl font-semibold text-white mb-2">
-              {totalCars === 0 ? 'Showroom Opening Soon' : 'No Matching Cars'}
+              {totalCars === 0 ? 'Dealership Opening Soon' : 'No Matching Cars'}
             </h3>
             <p className="text-sm text-neutral-400 mb-6">
               {totalCars === 0

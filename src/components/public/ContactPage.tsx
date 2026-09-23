@@ -104,7 +104,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onSubmitEnquiry }) => 
           {[
             {
               icon: <MapPin className="w-4 h-4" />,
-              title: 'Showroom',
+              title: 'Dealership',
               lines: addressLines,
               href: mapsUrl || undefined,
               hrefLabel: mapsUrl ? 'Open in Google Maps' : undefined,

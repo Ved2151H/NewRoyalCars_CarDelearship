@@ -202,16 +202,11 @@ export async function saveCarAction(
 export async function deleteCarAction(carId: string): Promise<ActionResult> {
   try {
     await requireAdmin();
-    const car = await prisma.car.delete({
+    // Soft delete: move to Trash. Images stay in storage so a restore works.
+    await prisma.car.update({
       where: { id: carId },
-      include: { images: true },
+      data: { deletedAt: new Date() },
     });
-    // Best-effort storage cleanup for this car's uploaded photos.
-    for (const img of car.images) {
-      if (img.publicId) {
-        await imageStorage.remove(img.publicId).catch(() => undefined);
-      }
-    }
     revalidatePath('/');
     revalidatePath('/admin');
     return { ok: true };
@@ -383,6 +378,7 @@ export interface PublicCarFilter {
 export async function getCarsAction(filter?: PublicCarFilter): Promise<ActionResult<Car[]>> {
   try {
     const where: {
+      deletedAt?: null;
       brand?: { equals: string; mode?: 'insensitive' };
       acAvailable?: boolean;
       price?: { gte?: number; lte?: number };
@@ -390,7 +386,7 @@ export async function getCarsAction(filter?: PublicCarFilter): Promise<ActionRes
       fuelType?: string;
       transmission?: string;
       OR?: Array<Record<string, unknown>>;
-    } = {};
+    } = { deletedAt: null };
 
     if (filter?.brand && filter.brand !== 'all') {
       where.brand = { equals: filter.brand, mode: 'insensitive' };
@@ -440,14 +436,14 @@ export async function getCarsAction(filter?: PublicCarFilter): Promise<ActionRes
     return { ok: true, data: cars.map(mapCar) };
   } catch (err) {
     console.error('[getCarsAction]', err);
-    return { ok: false, error: 'Could not load the showroom. Please refresh.' };
+    return { ok: false, error: 'Could not load the dealership. Please refresh.' };
   }
 }
 
 export async function getCarByIdAction(carId: string): Promise<ActionResult<Car | null>> {
   try {
-    const car = await prisma.car.findUnique({
-      where: { id: carId },
+    const car = await prisma.car.findFirst({
+      where: { id: carId, deletedAt: null },
       include: { images: true },
     });
     if (!car) return { ok: true, data: null };
@@ -462,6 +458,7 @@ export async function getCarByIdAction(carId: string): Promise<ActionResult<Car 
 export async function getBrandsAction(): Promise<ActionResult<string[]>> {
   try {
     const rows = await prisma.car.findMany({
+      where: { deletedAt: null },
       select: { brand: true },
       distinct: ['brand'],
       orderBy: { brand: 'asc' },

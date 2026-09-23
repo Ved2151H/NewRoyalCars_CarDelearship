@@ -125,7 +125,7 @@ export const AdminManageCars: React.FC<AdminManageCarsProps> = ({
           </div>
           <h3 className="font-serif text-2xl font-bold text-white mb-2">The Fleet Awaits</h3>
           <p className="text-sm text-neutral-400 max-w-md mx-auto mb-6">
-            Your showroom is completely empty — no dummy vehicles, no sample data. Add your first
+            Your dealership is completely empty — no dummy vehicles, no sample data. Add your first
             real vehicle and it will appear instantly on the public site.
           </p>
           <GlassButton

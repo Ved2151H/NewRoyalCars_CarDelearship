@@ -312,7 +312,7 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
           </h1>
           <p className="text-xs sm:text-sm text-neutral-400 mt-1">
             Enter the real specifications — nothing is prefilled. Every field you complete goes
-            live on the public showroom.
+            live on the public dealership.
           </p>
         </div>
 
@@ -335,7 +335,7 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
             className="p-4 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-sm font-semibold flex items-center gap-2"
           >
             <CheckCircle2 className="w-5 h-5" />
-            <span>Vehicle registered successfully! Updating live showroom...</span>
+            <span>Vehicle registered successfully! Updating live dealership...</span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -781,7 +781,7 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
             )}
             <p className="text-xs text-neutral-400 mb-3">
               Click to browse or drag &amp; drop — JPEG, PNG, WebP up to {MAX_FILE_MB} MB each.
-              Up to {MAX_PHOTOS} photos, first one becomes the showroom cover.
+              Up to {MAX_PHOTOS} photos, first one becomes the dealership cover.
             </p>
 
             {/* Optional URL Input */}
@@ -904,7 +904,7 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
                 : 'Creating Car…'
               : isEditing
               ? 'Update Vehicle'
-              : 'Save Car to Showroom'}
+              : 'Save Car to Dealership'}
           </GlassButton>
         </div>
       </form>

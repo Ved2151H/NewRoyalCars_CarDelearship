@@ -31,17 +31,19 @@ import { AdminManageCars } from './components/admin/AdminManageCars';
 import { AdminAddCar } from './components/admin/AdminAddCar';
 import { AdminEnquiries } from './components/admin/AdminEnquiries';
 import { AdminCustomers } from './components/admin/AdminCustomers';
+import { AdminTrash } from './components/admin/AdminTrash';
 import { AdminSettings } from './components/admin/AdminSettings';
+import { AdminAccountManagement } from './components/admin/AdminAccountManagement';
 
 export default function App({
   initialCars,
   initialBrands,
-  adminEmail,
+  initialAdminEmail,
   dealershipPhone,
 }: {
   initialCars: Car[];
   initialBrands: string[];
-  adminEmail: string;
+  initialAdminEmail: string;
   dealershipPhone: string;
 }) {
   const router = useRouter();
@@ -56,6 +58,7 @@ export default function App({
   // page reload never logs the admin out unexpectedly.
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
+  const [adminEmail, setAdminEmail] = useState(initialAdminEmail);
 
   const [adminTab, setAdminTab] = useState<AdminTab>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -102,6 +105,7 @@ export default function App({
       if (!active) return;
       if (res.ok && res.data?.authenticated) {
         setIsAdminAuthenticated(true);
+        if (res.data.email) setAdminEmail(res.data.email);
       }
       setSessionChecked(true);
     });
@@ -234,6 +238,9 @@ export default function App({
         next.delete(carId);
         return next;
       });
+      // Re-pull brands too — a trashed car may have been a brand's last car.
+      const brandsRes = await getBrandsAction();
+      if (brandsRes.ok && brandsRes.data) setBrands(brandsRes.data);
       router.refresh();
     },
     [router]
@@ -412,6 +419,7 @@ export default function App({
                   onMenuClick={() => setIsMobileNavOpen(true)}
                   pendingEnquiries={pendingEnquiries}
                   onViewEnquiries={() => setAdminTab('enquiries')}
+                  onOpenAccount={() => setAdminTab('account')}
                   onBackToWebsite={() => handleNavigate('home')}
                 />
 
@@ -462,6 +470,12 @@ export default function App({
                   )}
 
                   {adminTab === 'customers' && <AdminCustomers enquiries={enquiries} />}
+
+                  {adminTab === 'trash' && <AdminTrash />}
+
+                  {adminTab === 'account' && (
+                    <AdminAccountManagement onSessionRefreshed={(email) => setAdminEmail(email)} />
+                  )}
 
                   {adminTab === 'settings' && <AdminSettings />}
                 </div>
@@ -596,7 +610,7 @@ export default function App({
                 <span className="text-neutral-400">Nandu Dhanokar</span>
               </p>
               <span className="text-[9px] text-neutral-700 tracking-wider">
-                version : 7.1
+                version : 7.3
               </span>
             </div>
           </footer>
