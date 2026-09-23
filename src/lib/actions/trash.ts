@@ -239,5 +239,13 @@ export async function purgeExpiredTrash(): Promise<{ cars: number; enquiries: nu
     where: { deletedAt: { not: null, lt: cutoff } },
   });
 
+  // Refresh cached public/admin pages so purged items vanish immediately.
+  if (expiredCars.length > 0) {
+    revalidatePath('/');
+  }
+  if (expiredCars.length > 0 || expiredEnquiries.count > 0) {
+    revalidatePath('/admin');
+  }
+
   return { cars: expiredCars.length, enquiries: expiredEnquiries.count };
 }

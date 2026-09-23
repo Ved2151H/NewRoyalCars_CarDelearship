@@ -37,10 +37,10 @@ export async function submitEnquiryAction(
       };
     }
 
-    // If car-scoped, validate the car exists.
+    // If car-scoped, validate the car exists AND is not trashed.
     let carId: string | null = null;
     if (data.carId && data.carId !== 'general') {
-      const car = await prisma.car.findUnique({ where: { id: data.carId }, select: { id: true } });
+      const car = await prisma.car.findFirst({ where: { id: data.carId, deletedAt: null }, select: { id: true } });
       if (!car) return { ok: false, error: 'This vehicle is no longer listed. Please browse the dealership again.' };
       carId = car.id;
     }

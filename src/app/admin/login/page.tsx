@@ -12,8 +12,8 @@ export default async function AdminLoginPage() {
 
   try {
     const [rows, brandRows, admin, settings] = await Promise.all([
-      prisma.car.findMany({ include: { images: true }, orderBy: { createdAt: 'desc' } }),
-      prisma.car.findMany({ select: { brand: true }, distinct: ['brand'], orderBy: { brand: 'asc' } }),
+      prisma.car.findMany({ where: { deletedAt: null }, include: { images: true }, orderBy: { createdAt: 'desc' } }),
+      prisma.car.findMany({ where: { deletedAt: null }, select: { brand: true }, distinct: ['brand'], orderBy: { brand: 'asc' } }),
       prisma.admin.findFirst({ select: { email: true } }),
       prisma.dealerSettings.findFirst({ select: { contactPhone: true } }),
     ]);
