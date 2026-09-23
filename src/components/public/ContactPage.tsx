@@ -252,7 +252,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onSubmitEnquiry }) => 
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
                   >
-                    <input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98200 00000" className={inputClass} />
+                    <input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 XXXXXXXX" className={inputClass} />
                   </motion.div>
                 </div>
                 <div>
