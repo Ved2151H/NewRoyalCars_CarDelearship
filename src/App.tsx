@@ -596,7 +596,7 @@ export default function App({
                 <span className="text-neutral-400">Nandu Dhanokar</span>
               </p>
               <span className="text-[9px] text-neutral-700 tracking-wider">
-                version : 7
+                version : 7.1
               </span>
             </div>
           </footer>

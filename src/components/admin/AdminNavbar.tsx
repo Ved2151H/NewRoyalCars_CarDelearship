@@ -181,7 +181,7 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -6, scale: 0.98 }}
                 transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                className="absolute right-0 top-[calc(100%+10px)] w-[min(92vw,22rem)] rounded-2xl bg-[#0a0b0d]/95 backdrop-blur-2xl border border-white/10 shadow-2xl shadow-black/60 overflow-hidden z-50"
+                className="max-md:fixed max-md:left-2 max-md:right-2 max-md:top-16 max-md:w-auto absolute right-0 top-[calc(100%+10px)] w-[min(92vw,22rem)] rounded-2xl bg-[#0a0b0d]/95 backdrop-blur-2xl border border-white/10 shadow-2xl shadow-black/60 overflow-hidden z-50 max-md:z-[70]"
                 role="dialog"
                 aria-label="Notifications"
               >
@@ -222,15 +222,15 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({
                             <MessageSquare className="w-3.5 h-3.5" />
                           </span>
                           <span className="min-w-0 flex-1">
-                            <span className="flex items-center gap-2">
-                              <span className="text-xs font-semibold text-white truncate">
+                            <span className="flex items-center gap-2 min-w-0">
+                              <span className="text-xs font-semibold text-white truncate max-md:whitespace-normal max-md:break-words">
                                 {e.customerName}
                               </span>
                               {!seenIds.has(e.id) && (
                                 <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" aria-label="unread" />
                               )}
                             </span>
-                            <span className="block text-[11px] text-neutral-400 truncate mt-0.5">
+                            <span className="block text-[11px] text-neutral-400 truncate max-md:whitespace-normal max-md:break-words mt-0.5">
                               {e.carName}
                             </span>
                             <span className="block text-[10px] text-neutral-600 mt-0.5">

@@ -607,7 +607,8 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
               />
             </div>
 
-            <div>
+            {/* Engine Specification — desktop/tablet only (hidden on mobile) */}
+            <div className="hidden sm:block">
               <label className="block text-xs text-neutral-300 font-medium mb-1">
                 Engine Specification
               </label>
@@ -620,7 +621,8 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
               />
             </div>
 
-            <div>
+            {/* Insurance Validity — desktop/tablet only (hidden on mobile) */}
+            <div className="hidden sm:block">
               <label className="block text-xs text-neutral-300 font-medium mb-1">
                 Insurance Validity
               </label>
