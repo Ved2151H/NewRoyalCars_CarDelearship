@@ -16,15 +16,17 @@ interface EnquiryModalProps {
   isOpen: boolean;
   onClose: () => void;
   car: Car | null;
+  dealershipPhone?: string;
   onSubmitEnquiry: (enquiry: Omit<Enquiry, 'id' | 'date'>) => Promise<string>;
 }
 
 /** Inner form lives in its own component so hooks never run conditionally. */
 const EnquiryForm: React.FC<{
   car: Car | null;
+  dealershipPhone?: string;
   onClose: () => void;
   onSubmitEnquiry: (enquiry: Omit<Enquiry, 'id' | 'date'>) => Promise<string>;
-}> = ({ car, onClose, onSubmitEnquiry }) => {
+}> = ({ car, dealershipPhone, onClose, onSubmitEnquiry }) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [city, setCity] = useState('');
@@ -207,15 +209,24 @@ const EnquiryForm: React.FC<{
             </AnimatePresence>
 
             {/* Submit button */}
-            <GlassButton
-              variant="gold"
-              size="lg"
-              glow
-              className="w-full mt-2"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Sending Your Enquiry…' : 'Submit Enquiry →'}
-            </GlassButton>
+            <div className="flex flex-col gap-3 mt-2">
+              <GlassButton
+                variant="gold"
+                size="lg"
+                glow
+                className="w-full"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Sending Your Enquiry…' : 'Submit Enquiry →'}
+              </GlassButton>
+              {dealershipPhone && (
+                <a href={`tel:${dealershipPhone.replace(/[\s()-]+/g, '')}`} className="block">
+                  <GlassButton type="button" variant="secondary" size="lg" className="w-full" icon={<Phone className="w-4 h-4" />}>
+                    Call Now
+                  </GlassButton>
+                </a>
+              )}
+            </div>
           </form>
         </div>
       ) : (
@@ -278,6 +289,7 @@ const EnquiryForm: React.FC<{
 export const EnquiryModal: React.FC<EnquiryModalProps> = ({
   isOpen,
   car,
+  dealershipPhone,
   onClose,
   onSubmitEnquiry,
 }) => {
@@ -301,7 +313,7 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
             className="relative z-10 w-full flex justify-center"
           >
-            <EnquiryForm car={car} onClose={onClose} onSubmitEnquiry={onSubmitEnquiry} />
+            <EnquiryForm car={car} dealershipPhone={dealershipPhone} onClose={onClose} onSubmitEnquiry={onSubmitEnquiry} />
           </motion.div>
         </motion.div>
       )}

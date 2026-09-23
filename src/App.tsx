@@ -605,6 +605,7 @@ export default function App({
           <EnquiryModal
             isOpen={isEnquiryModalOpen}
             car={selectedCarForEnquiry}
+            dealershipPhone={dealershipPhone}
             onClose={() => setIsEnquiryModalOpen(false)}
             onSubmitEnquiry={handleSubmitEnquiry}
           />
