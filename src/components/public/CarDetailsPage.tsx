@@ -68,7 +68,7 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex items-center gap-2 text-xs text-neutral-500 mb-6"
+        className="flex flex-wrap items-center gap-2 text-xs text-neutral-500 mb-6"
         aria-label="Breadcrumb"
       >
         <button onClick={onBack} className="hover:text-white transition-colors cursor-pointer">
@@ -79,7 +79,7 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
           Cars
         </button>
         <span>/</span>
-        <span className="text-neutral-300">{car.name}</span>
+        <span className="text-neutral-300 break-words min-w-0 flex-1">{car.name}</span>
       </motion.nav>
 
       <div className="grid lg:grid-cols-12 gap-8">
@@ -88,7 +88,7 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
           initial={{ opacity: 0, x: -30, filter: 'blur(8px)' }}
           animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
           transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-          className="lg:col-span-7"
+          className="lg:col-span-7 min-w-0"
         >
           {/* Main image */}
           <div className="relative h-72 sm:h-96 lg:h-[420px] rounded-2xl overflow-hidden glass-card group">
@@ -176,15 +176,15 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
           initial={{ opacity: 0, x: 30, filter: 'blur(8px)' }}
           animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
           transition={{ duration: 0.7, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
-          className="lg:col-span-5"
+          className="lg:col-span-5 min-w-0"
         >
           {/* Title row */}
-          <div className="flex items-start justify-between gap-4">
-            <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-white tracking-tight">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-white tracking-tight break-words">
               {car.name}
             </h1>
             <span
-              className={`mt-2 px-3 py-1 rounded-full text-[11px] font-semibold tracking-wide whitespace-nowrap ${
+              className={`mt-2 sm:mt-0 self-start px-3 py-1 rounded-full text-[11px] font-semibold tracking-wide whitespace-nowrap ${
                 car.availability === 'Available'
                   ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-400/30'
                   : car.availability === 'Reserved'
@@ -208,13 +208,13 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
                 initial={{ opacity: 0, x: 16 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.45, delay: 0.25 + idx * 0.06, ease: [0.16, 1, 0.3, 1] }}
-                className="flex items-center justify-between px-4 sm:px-5 py-3 hover:bg-white/[0.03] transition-colors duration-300"
+                className="flex items-center justify-between gap-4 px-4 sm:px-5 py-3 hover:bg-white/[0.03] transition-colors duration-300"
               >
-                <span className="flex items-center gap-3 text-sm text-neutral-400">
+                <span className="flex items-center gap-3 text-sm text-neutral-400 shrink-0">
                   <span className="text-neutral-500">{spec.icon}</span>
                   {spec.label}
                 </span>
-                <span className="text-sm font-semibold text-white text-right">{spec.value}</span>
+                <span className="text-sm font-semibold text-white text-right break-words min-w-0">{spec.value}</span>
               </motion.div>
             ))}
           </div>
@@ -249,7 +249,7 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
         className="mt-12"
       >
         {/* Tab bar */}
-        <div className="inline-flex p-1 rounded-xl glass-panel mb-8">
+        <div className="flex sm:inline-flex overflow-x-auto max-w-full p-1 rounded-xl glass-panel mb-8 scrollbar-none" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {(['overview', 'features', 'gallery'] as DetailTab[]).map((t) => (
             <button
               key={t}
@@ -283,7 +283,7 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
                 {/* About this car */}
                 <div className="rounded-2xl glass-panel p-6">
                   <h3 className="font-serif text-xl font-semibold text-white mb-3">About this car</h3>
-                  <p className="text-sm text-neutral-300 leading-relaxed">
+                  <p className="text-sm text-neutral-300 leading-relaxed break-words min-w-0">
                     {car.description || `The ${car.name} offers a perfect blend of style, performance and comfort. Well-maintained and ready for a new home.`}
                   </p>
                 </div>
@@ -298,10 +298,10 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
                         initial={{ opacity: 0, x: 12 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.4, delay: idx * 0.08 }}
-                        className="flex items-center gap-3 text-sm text-neutral-300"
+                        className="flex items-start gap-3 text-sm text-neutral-300"
                       >
-                        <CheckCircle2 className="w-4 h-4 text-neutral-400 shrink-0" />
-                        {item}
+                        <CheckCircle2 className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5" />
+                        <span className="break-words min-w-0">{item}</span>
                       </motion.li>
                     ))}
                   </ul>
@@ -320,10 +320,10 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
                         whileInView={{ opacity: 1, x: 0 }}
                         viewport={{ once: true }}
                         transition={{ duration: 0.4, delay: idx * 0.05 }}
-                        className="flex items-center gap-3 text-sm text-neutral-200"
+                        className="flex items-start gap-3 text-sm text-neutral-200"
                       >
-                        <CheckCircle2 className="w-4 h-4 text-neutral-500 shrink-0" />
-                        {feat}
+                        <CheckCircle2 className="w-4 h-4 text-neutral-500 shrink-0 mt-0.5" />
+                        <span className="break-words min-w-0">{feat}</span>
                       </motion.div>
                     ))}
                   </div>
