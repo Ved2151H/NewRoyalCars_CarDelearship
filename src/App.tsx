@@ -37,10 +37,12 @@ export default function App({
   initialCars,
   initialBrands,
   adminEmail,
+  dealershipPhone,
 }: {
   initialCars: Car[];
   initialBrands: string[];
   adminEmail: string;
+  dealershipPhone: string;
 }) {
   const router = useRouter();
 
@@ -538,6 +540,7 @@ export default function App({
                   <CarDetailsPage
                     car={detailCar}
                     isFavorite={favorites.has(detailCar.id)}
+                    dealershipPhone={dealershipPhone}
                     onToggleFavorite={handleToggleFavorite}
                     onBack={() => {
                       setDetailCarId(null);
@@ -593,7 +596,7 @@ export default function App({
                 <span className="text-neutral-400">Nandu Dhanokar</span>
               </p>
               <span className="text-[9px] text-neutral-700 tracking-wider">
-                version : 6.1
+                version : 6.2
               </span>
             </div>
           </footer>

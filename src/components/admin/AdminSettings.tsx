@@ -8,7 +8,7 @@ import {
 
 export const AdminSettings: React.FC = () => {
   const [dealershipName, setDealershipName] = useState('NEW ROYAL CARS');
-  const [contactPhone, setContactPhone] = useState('+91 98200 12345');
+  const [contactPhone, setContactPhone] = useState('');
   const [supportEmail, setSupportEmail] = useState('concierge@newroyalcars.com');
   const [showroomAddress, setShowroomAddress] = useState('Plot 42, Royal Pavilion Blvd, Worli Sea Face, Mumbai');
   const [businessHours, setBusinessHours] = useState('Mon – Sun: 10:00 AM – 8:30 PM');

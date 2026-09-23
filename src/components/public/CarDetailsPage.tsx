@@ -21,6 +21,7 @@ import {
 interface CarDetailsPageProps {
   car: Car;
   isFavorite: boolean;
+  dealershipPhone: string;
   onToggleFavorite: (carId: string) => void;
   onBack: () => void;
   onSendEnquiry: (car: Car) => void;
@@ -38,6 +39,7 @@ const WHY_CHOOSE_US = [
 export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
   car,
   isFavorite,
+  dealershipPhone,
   onToggleFavorite,
   onBack,
   onSendEnquiry,
@@ -227,11 +229,13 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
             >
               Send Enquiry
             </GlassButton>
-            <a href="tel:+919820012345" className="block">
-              <GlassButton variant="secondary" size="lg" className="w-full" icon={<Phone className="w-4 h-4" />}>
-                Call Now
-              </GlassButton>
-            </a>
+            {dealershipPhone && (
+              <a href={`tel:${dealershipPhone.replace(/\s+/g, '')}`} className="block">
+                <GlassButton variant="secondary" size="lg" className="w-full" icon={<Phone className="w-4 h-4" />}>
+                  Call Now
+                </GlassButton>
+              </a>
+            )}
           </div>
         </motion.div>
       </div>

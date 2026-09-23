@@ -54,7 +54,7 @@ export async function getDealerSettingsAction(): Promise<
         ok: true,
         data: {
           dealershipName: 'NEW ROYAL CARS',
-          contactPhone: '+91 98200 12345',
+          contactPhone: '',
           supportEmail: 'concierge@newroyalcars.com',
           showroomAddress: 'Plot 42, Royal Pavilion Blvd, Worli Sea Face, Mumbai 400018',
           businessHours: 'Mon – Sun: 10:00 AM – 8:30 PM',

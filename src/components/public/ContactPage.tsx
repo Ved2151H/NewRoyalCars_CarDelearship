@@ -30,14 +30,14 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onSubmitEnquiry }) => 
   }, []);
 
   const dealershipName = settings?.dealershipName ?? 'NEW ROYAL CARS';
-  const contactPhone = settings?.contactPhone ?? '+91 98200 12345';
+  const contactPhone = settings?.contactPhone ?? '';
   const supportEmail = settings?.supportEmail ?? 'concierge@newroyalcars.com';
   const showroomAddress = settings?.showroomAddress ?? 'Plot 42, Royal Pavilion Blvd, Worli Sea Face, Mumbai 400018';
   const businessHours = settings?.businessHours ?? 'Mon – Sun: 10:00 AM – 8:30 PM';
   const whatsappNumber = settings?.whatsappNumber ?? '';
   const mapsUrl = settings?.mapsUrl ?? '';
 
-  const telHref = `tel:${contactPhone.replace(/[^+\d]/g, '')}`;
+  const telHref = contactPhone ? `tel:${contactPhone.replace(/[^+\d]/g, '')}` : undefined;
   const mailHref = `mailto:${supportEmail}`;
   const waHref = whatsappNumber
     ? `https://wa.me/${whatsappNumber.replace(/[^\d]/g, '')}`
@@ -113,7 +113,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onSubmitEnquiry }) => 
             {
               icon: <Phone className="w-4 h-4" />,
               title: 'Phone',
-              lines: [contactPhone],
+              lines: contactPhone ? [contactPhone] : [],
               href: telHref,
               hrefLabel: 'Call now',
               hrefIcon: <Phone className="w-3 h-3" />,
