@@ -205,7 +205,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           className="mt-12 lg:mt-16 max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-y-8"
         >
           {[
-            { value: '500+', label: 'Happy Customers' },
+            { value: '1000+', label: 'Happy Customers' },
             { value: '100%', label: 'Verified Cars' },
             { value: 'Best Prices', label: 'in the Market' },
             { value: 'Dedicated', label: 'After-Sales Support' },
