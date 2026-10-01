@@ -3,9 +3,17 @@
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/auth';
-import { imageStorage } from '@/lib/storage';
+import { imageStorage, storageKeyFromUrl } from '@/lib/storage';
 import type { ActionResult } from '@/lib/utils';
 import { TRASH_RETENTION_DAYS, type DeletedCarItem, type DeletedEnquiryItem } from '@/lib/trash';
+
+export interface PurgeReport {
+  dbDeleted: boolean;
+  objectsRemoved: number;
+  objectsFailed: string[];
+  verifiedDbGone: boolean;
+  verifiedStorageGone: boolean;
+}
 
 function expiresAt(deletedAt: Date): Date {
   return new Date(deletedAt.getTime() + TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000);
@@ -156,39 +164,116 @@ export async function restoreEnquiryAction(enquiryId: string): Promise<ActionRes
 }
 
 /* ==================================================================
-   PERMANENT DELETE — real deletion + storage cleanup
+   PERMANENT DELETE — full cascade: DB record(s), related rows and
+   every storage object that belongs exclusively to the car. Trash and
+   restore never call this, so soft-deleted cars stay fully restorable.
    ================================================================== */
 
-/** Shared worker: purges one car's storage objects + DB row. */
-async function purgeCar(carId: string): Promise<void> {
-  const car = await prisma.car.findUnique({
-    where: { id: carId },
-    include: { images: true },
+/**
+ * Shared purge worker.
+ *
+ * Order matters for consistency:
+ *   1. Delete the Car row — a single conditional DELETE (Postgres cascades
+ *      CarImage and Booking rows, detaches Enquiries via SetNull), guarded by
+ *      the still-in-Trash condition so a concurrent restore can race safely.
+ *   2. Only after the DB commit, remove each storage object, retrying once.
+ *   3. Verify: the car must no longer exist in Neon Postgres and every object
+ *      must be absent from storage. Failures are returned, never hidden.
+ *
+ * If storage removal fails, the DB row is already gone (the source of truth),
+ * and the report names the orphaned keys so they can be cleaned up.
+ */
+async function purgeCar(carId: string, keys: string[]): Promise<PurgeReport> {
+  // 1. DB deletion — conditioned on still being in the Trash so a restore
+  //    racing this delete wins and the purge becomes a no-op.
+  const deleted = await prisma.car.deleteMany({
+    where: { id: carId, deletedAt: { not: null } },
   });
-  if (!car) return;
+  if (deleted.count === 0) {
+    return {
+      dbDeleted: false,
+      objectsRemoved: 0,
+      objectsFailed: [],
+      verifiedDbGone: false,
+      verifiedStorageGone: false,
+    };
+  }
 
-  // DB first (cascades CarImage rows), then best-effort storage cleanup so a
-  // storage failure can never leave a half-deleted DB state behind.
-  await prisma.car.delete({ where: { id: carId } });
-  for (const img of car.images) {
-    if (img.publicId) {
-      await imageStorage.remove(img.publicId).catch((e) => {
-        console.error('[purgeCar] storage cleanup failed for', img.publicId, e);
-      });
+  // 2. Storage cleanup — the caller snapshots the keys BEFORE the DB delete
+  //    cascades the CarImage rows (and the key information) away. Each object
+  //    gets one retry; failures are collected, never swallowed.
+  const objectsFailed: string[] = [];
+  let objectsRemoved = 0;
+  for (const key of keys) {
+    let ok = true;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        await imageStorage.remove(key);
+        ok = true;
+        break;
+      } catch (err) {
+        ok = false;
+        console.error('[purgeCar] storage removal failed', key, err);
+      }
+    }
+    if (ok) objectsRemoved++;
+    else objectsFailed.push(key);
+  }
+
+  // 3. Verification — the DB row must be gone, and every targeted object must
+  //    be absent from storage.
+  const verifiedDbGone = (await prisma.car.findUnique({ where: { id: carId }, select: { id: true } })) === null;
+  let verifiedStorageGone = true;
+  for (const key of keys) {
+    if (await imageStorage.exists(key)) {
+      verifiedStorageGone = false;
+      break;
     }
   }
+
+  return { dbDeleted: true, objectsRemoved, objectsFailed, verifiedDbGone, verifiedStorageGone };
 }
 
-export async function purgeCarAction(carId: string): Promise<ActionResult> {
+export async function purgeCarAction(carId: string): Promise<ActionResult<PurgeReport>> {
   try {
     await requireAdmin();
     // Only purge cars that are actually in the Trash.
-    const car = await prisma.car.findFirst({ where: { id: carId, deletedAt: { not: null } } });
+    const car = await prisma.car.findFirst({
+      where: { id: carId, deletedAt: { not: null } },
+      include: { images: { select: { publicId: true, imageUrl: true } } },
+    });
     if (!car) return { ok: false, error: 'Car not found in Trash.' };
-    await purgeCar(carId);
+
+    // Snapshot every storage key owned by this car BEFORE deletion — the
+    // cascade removes the CarImage rows and with them the key information.
+    const keys = new Set<string>();
+    for (const img of car.images) {
+      if (img.publicId) {
+        keys.add(img.publicId);
+        continue;
+      }
+      const fromUrl = storageKeyFromUrl(img.imageUrl);
+      if (fromUrl) keys.add(fromUrl); // null = foreign host → shared, skip
+    }
+
+    const report = await purgeCar(carId, [...keys]);
+
+    if (!report.dbDeleted) {
+      return { ok: false, error: 'Car not found in Trash.' };
+    }
+
     revalidatePath('/');
     revalidatePath('/admin');
-    return { ok: true };
+
+    if (report.objectsFailed.length > 0 || !report.verifiedStorageGone) {
+      const names = [...new Set([...report.objectsFailed])].join(', ');
+      console.error('[purgeCarAction] partial storage purge', carId, report);
+      return {
+        ok: false,
+        error: `The vehicle was deleted from the database, but ${report.objectsFailed.length} photo file(s) could not be removed from storage${names ? `: ${names}` : ''}. They can be cleaned up later without affecting the website.`,
+      };
+    }
+    return { ok: true, data: report };
   } catch (err) {
     if (err instanceof Error && err.message === 'Unauthorized') {
       return { ok: false, error: 'Your session expired. Please sign in again.' };
@@ -227,10 +312,26 @@ export async function purgeExpiredTrash(): Promise<{ cars: number; enquiries: nu
 
   const expiredCars = await prisma.car.findMany({
     where: { deletedAt: { not: null, lt: cutoff } },
-    select: { id: true },
+    include: { images: { select: { publicId: true, imageUrl: true } } },
   });
   for (const car of expiredCars) {
-    await purgeCar(car.id).catch((e) => console.error('[purgeExpiredTrash] car', car.id, e));
+    // Same key snapshot + full-cascade purge as the manual Trash action.
+    const keys = new Set<string>();
+    for (const img of car.images) {
+      if (img.publicId) {
+        keys.add(img.publicId);
+        continue;
+      }
+      const fromUrl = storageKeyFromUrl(img.imageUrl);
+      if (fromUrl) keys.add(fromUrl);
+    }
+    const report = await purgeCar(car.id, [...keys]).catch((e) => {
+      console.error('[purgeExpiredTrash] car', car.id, e);
+      return null;
+    });
+    if (report && (report.objectsFailed.length > 0 || !report.verifiedStorageGone)) {
+      console.error('[purgeExpiredTrash] orphaned storage keys for car', car.id, report.objectsFailed);
+    }
   }
 
   const expiredEnquiries = await prisma.enquiry.deleteMany({

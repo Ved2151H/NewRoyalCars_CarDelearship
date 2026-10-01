@@ -1,11 +1,12 @@
 import 'server-only';
 import { createHash, randomBytes } from 'crypto';
-import { mkdir, writeFile, unlink } from 'fs/promises';
+import { mkdir, writeFile, unlink, access } from 'fs/promises';
 import path from 'path';
 import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
+  HeadObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
@@ -37,6 +38,8 @@ export interface StoredImage {
 export interface ImageStorageProvider {
   put(file: File): Promise<StoredImage>;
   remove(publicId: string): Promise<void>;
+  /** Best-effort existence check (never throws). Used to verify purges. */
+  exists(publicId: string): Promise<boolean>;
 }
 
 /** A short-lived upload grant: the browser PUTs directly to storage. */
@@ -111,6 +114,45 @@ function neonConfig() {
 /** Public URL for an object in a public_read Neon bucket (path-style). */
 function neonPublicUrl(endpoint: string, bucket: string, key: string): string {
   return `${endpoint.replace(/\/$/, '')}/${bucket}/${key.replace(/^\//, '')}`;
+}
+
+/**
+ * Derive the bucket key from a stored image URL — used to purge legacy rows
+ * whose `publicId` was never saved (older uploads predate that column).
+ *
+ * Safety: only URLs that resolve to the CURRENTLY-CONFIGURED storage endpoint
+ * + bucket are translated. Any other host (external CDN, pasted link, legacy
+ * provider) returns null so shared/unrelated resources are never touched.
+ */
+export function storageKeyFromUrl(imageUrl: string): string | null {
+  if (!imageUrl) return null;
+
+  // App-relative local-disk path → the filename inside public/uploads.
+  if (imageUrl.startsWith('/uploads/')) {
+    const name = imageUrl.slice('/uploads/'.length);
+    return /^[\w.-]+$/.test(name) ? name : null; // no path traversal
+  }
+
+  try {
+    const parsed = new URL(imageUrl);
+    const cfg = neonConfig();
+    if (cfg) {
+      const host = `${cfg.endpoint.replace(/\/$/, '')}/${cfg.bucket}/`;
+      if (imageUrl.startsWith(host) && parsed.pathname.startsWith(`/${cfg.bucket}/`)) {
+        // pathname = /<bucket>/<key> — strip the bucket segment to get the key.
+        const key = decodeURIComponent(parsed.pathname.slice(cfg.bucket.length + 2));
+        return key || null;
+      }
+    }
+    const cloud = cloudinaryConfig();
+    if (cloud && parsed.hostname === `res.cloudinary.com` && parsed.pathname.includes('/image/upload/')) {
+      const idx = parsed.pathname.indexOf('/image/upload/');
+      return decodeURIComponent(parsed.pathname.slice(idx + '/image/upload/'.length)) || null;
+    }
+  } catch {
+    /* not an absolute URL */
+  }
+  return null; // foreign host — treat as shared, never delete
 }
 
 let s3Client: S3Client | null = null;
@@ -212,6 +254,20 @@ const neonProvider: ImageStorageProvider = {
       // Log loudly so orphaned objects can be cleaned up later, but never
       // fail the caller's DB flow because of a storage hiccup.
       console.error('[storage:neon] object deletion failed', publicId, err);
+      throw err; // callers decide whether a purge is allowed to continue
+    }
+  },
+
+  async exists(publicId: string): Promise<boolean> {
+    const cfg = neonConfig();
+    if (!cfg || !publicId) return false;
+    try {
+      await getS3().send(
+        new HeadObjectCommand({ Bucket: cfg.bucket, Key: publicId })
+      );
+      return true;
+    } catch {
+      return false; // 404 (gone) or transient error — treat as absent
     }
   },
 };
@@ -275,10 +331,28 @@ const cloudinaryProvider: ImageStorageProvider = {
     form.set('public_id', publicId);
     form.set('signature', signature);
 
-    await fetch(`https://api.cloudinary.com/v1_1/${cfg.cloudName}/image/destroy`, {
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${cfg.cloudName}/image/destroy`, {
       method: 'POST',
       body: form,
     }).catch(() => undefined);
+    if (!res || !res.ok) {
+      console.error('[storage:cloudinary] object deletion failed', publicId);
+      throw new Error('Cloudinary destroy failed');
+    }
+  },
+
+  async exists(publicId: string): Promise<boolean> {
+    const cfg = cloudinaryConfig();
+    if (!cfg || !publicId) return false;
+    try {
+      const res = await fetch(
+        `https://res.cloudinary.com/${cfg.cloudName}/image/upload/${encodeURIComponent(publicId)}`,
+        { method: 'HEAD' }
+      );
+      return res.ok;
+    } catch {
+      return false;
+    }
   },
 };
 
@@ -311,6 +385,17 @@ const localDiskProvider: ImageStorageProvider = {
     // Only delete plain filenames inside the uploads dir — no path traversal.
     if (!/^[\w.-]+$/.test(publicId)) return;
     await unlink(path.join(uploadsDir(), publicId)).catch(() => undefined);
+  },
+
+  async exists(publicId: string): Promise<boolean> {
+    // Only plain filenames inside the uploads dir — no path traversal.
+    if (!/^[\w.-]+$/.test(publicId)) return false;
+    try {
+      await access(path.join(uploadsDir(), publicId));
+      return true;
+    } catch {
+      return false;
+    }
   },
 };
 
