@@ -54,12 +54,12 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
   const [tab, setTab] = useState<DetailTab>('overview');
 
   /* ------------------ Automatic photo rotation (slideshow) ------------------
-   * Cycles 1 → 2 → … → N → 1 every second with a crossfade. Pauses while the
+   * Cycles 1 → 2 → … → N → 1 every 5 seconds with a crossfade. Pauses while the
    * pointer is over the viewer and for a few seconds after any manual
    * interaction (arrows/thumbnails/zoom/pan). Once the user takes over via a
    * control, the slideshow stays off until they re-enable the toggle.
    */
-  const ROTATE_MS = 1000;
+  const ROTATE_MS = 5000;
   const RESUME_MS = 4000;
   const [slideshowOn, setSlideshowOn] = useState(true);
   const hoverPauseRef = useRef(false); // pointer resting on the viewer
