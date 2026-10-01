@@ -192,7 +192,7 @@ export const AdminTrash: React.FC = () => {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={
-            section === 'cars' ? 'Search by car name or RC number…' : 'Search by customer name or phone…'
+            section === 'cars' ? 'Search by car name…' : 'Search by customer name or phone…'
           }
           className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-black/50 border border-white/10 text-white text-sm placeholder:text-neutral-600 focus:outline-none focus:border-white/40"
         />
@@ -242,7 +242,7 @@ export const AdminTrash: React.FC = () => {
                 <div className="flex-1 min-w-0">
                   <h3 className="text-sm font-bold text-white truncate">{item.name}</h3>
                   <p className="text-[11px] text-neutral-500 mt-0.5">
-                    {item.carNumber} · ₹{item.price.toLocaleString('en-IN')}
+                    ₹{item.price.toLocaleString('en-IN')}
                   </p>
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
                     <span className="text-[10px] text-neutral-600">
@@ -344,7 +344,7 @@ export const AdminTrash: React.FC = () => {
         confirmLabel="Delete Permanently"
         message={
           purgeCarTarget
-            ? `Are you sure you want to permanently delete this car?\n\n${purgeCarTarget.name} (${purgeCarTarget.carNumber})\n\nThis action cannot be undone. Its photos will also be removed from storage.`
+            ? `Are you sure you want to permanently delete this car?\n\n${purgeCarTarget.name}\n\nThis action cannot be undone. Its photos will also be removed from storage.`
             : ''
         }
       />

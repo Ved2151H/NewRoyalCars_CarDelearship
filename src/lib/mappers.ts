@@ -7,7 +7,7 @@ export function toAvailability(status: 'AVAILABLE' | 'UNAVAILABLE' | 'SOLD'): Ca
     case 'SOLD':
       return 'Sold';
     case 'UNAVAILABLE':
-      return 'Reserved';
+      return 'Booked';
     default:
       return 'Available';
   }
@@ -17,7 +17,7 @@ export function fromAvailability(a: CarAvailability): 'AVAILABLE' | 'UNAVAILABLE
   switch (a) {
     case 'Sold':
       return 'SOLD';
-    case 'Reserved':
+    case 'Booked':
       return 'UNAVAILABLE';
     default:
       return 'AVAILABLE';
@@ -35,8 +35,7 @@ export function mapCar(car: CarWithImages): Car {
     id: car.id,
     name: car.name,
     brand: car.brand,
-    model: car.model,
-    carNumber: car.carNumber,
+    variant: car.variant,
     price: car.price,
     formattedPrice: `₹${car.price.toLocaleString('en-IN')}`,
     ac: car.acAvailable,
@@ -46,6 +45,7 @@ export function mapCar(car: CarWithImages): Car {
     fuel: car.fuelType as FuelType,
     transmission: car.transmission as TransmissionType,
     year: car.year,
+    insurance: car.insurance ?? 'Not specified',
     availability: toAvailability(car.status),
     images: sortedImages.map((i) => i.imageUrl),
     description: car.description ?? '',

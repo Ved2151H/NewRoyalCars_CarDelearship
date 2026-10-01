@@ -143,9 +143,8 @@ export default function App({
           const q = filters.searchQuery.toLowerCase();
           const matchName = car.name.toLowerCase().includes(q);
           const matchBrand = car.brand.toLowerCase().includes(q);
-          const matchModel = car.model.toLowerCase().includes(q);
-          const matchCarNumber = car.carNumber.toLowerCase().includes(q);
-          if (!matchName && !matchBrand && !matchModel && !matchCarNumber) return false;
+          const matchVariant = car.variant.toLowerCase().includes(q);
+          if (!matchName && !matchBrand && !matchVariant) return false;
         }
 
         return true;
@@ -196,8 +195,7 @@ export default function App({
       fd.set('payload', JSON.stringify({
         name: car.name,
         brand: car.brand,
-        model: car.model,
-        carNumber: car.carNumber,
+        variant: car.variant,
         acAvailable: car.ac,
         price: car.price,
         numberOfOwners: car.owners,
@@ -206,11 +204,12 @@ export default function App({
         fuelType: car.fuel,
         transmission: car.transmission,
         year: car.year,
+        insurance: car.insurance === 'Not specified' ? '' : car.insurance,
         description: car.description,
         status:
           car.availability === 'Sold'
             ? 'SOLD'
-            : car.availability === 'Reserved'
+            : car.availability === 'Booked'
             ? 'UNAVAILABLE'
             : 'AVAILABLE',
         features: car.features,
@@ -626,7 +625,7 @@ export default function App({
                 <span className="text-neutral-400">Nandu Dhanokar</span>
               </p>
               <span className="text-[9px] text-neutral-700 tracking-wider">
-                version : 7.8
+                version : 9.2
               </span>
             </div>
           </footer>

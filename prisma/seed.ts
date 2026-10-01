@@ -13,8 +13,8 @@ const DEMO_CARS = [
   {
     name: 'Hyundai Creta SX',
     brand: 'Hyundai',
-    model: 'Creta',
-    carNumber: 'MH20AB1234',
+    variant: 'Creta',
+    insurance: 'Valid',
     acAvailable: true,
     price: 850000,
     numberOfOwners: 1,
@@ -36,8 +36,8 @@ const DEMO_CARS = [
   {
     name: 'Maruti Swift VXi',
     brand: 'Maruti Suzuki',
-    model: 'Swift',
-    carNumber: 'MH12DE5678',
+    variant: 'Swift',
+    insurance: 'Valid',
     acAvailable: true,
     price: 520000,
     numberOfOwners: 1,
@@ -58,8 +58,8 @@ const DEMO_CARS = [
   {
     name: 'Toyota Innova Crysta GX',
     brand: 'Toyota',
-    model: 'Innova Crysta',
-    carNumber: 'MH14CG9012',
+    variant: 'Innova Crysta',
+    insurance: 'Valid',
     acAvailable: true,
     price: 1850000,
     numberOfOwners: 2,
@@ -80,8 +80,8 @@ const DEMO_CARS = [
   {
     name: 'Honda City ZX',
     brand: 'Honda',
-    model: 'City',
-    carNumber: 'MH01EF3456',
+    variant: 'City',
+    insurance: 'Valid',
     acAvailable: true,
     price: 1120000,
     numberOfOwners: 1,
@@ -102,8 +102,8 @@ const DEMO_CARS = [
   {
     name: 'Volkswagen Virtus GT',
     brand: 'Volkswagen',
-    model: 'Virtus',
-    carNumber: 'MH04GH7890',
+    variant: 'Virtus',
+    insurance: 'Valid',
     acAvailable: true,
     price: 1650000,
     numberOfOwners: 1,
@@ -124,8 +124,8 @@ const DEMO_CARS = [
   {
     name: 'Skoda Slavia 1.0 TSI',
     brand: 'Skoda',
-    model: 'Slavia',
-    carNumber: 'MH03IJ2468',
+    variant: 'Slavia',
+    insurance: 'Valid',
     acAvailable: true,
     price: 1280000,
     numberOfOwners: 1,
@@ -146,8 +146,8 @@ const DEMO_CARS = [
   {
     name: 'Kia Seltos HTX',
     brand: 'Kia',
-    model: 'Seltos',
-    carNumber: 'MH43JK1357',
+    variant: 'Seltos',
+    insurance: 'Valid',
     acAvailable: true,
     price: 1420000,
     numberOfOwners: 1,
@@ -168,8 +168,8 @@ const DEMO_CARS = [
   {
     name: 'Mahindra XUV700 AX7',
     brand: 'Mahindra',
-    model: 'XUV700',
-    carNumber: 'MH02KL8642',
+    variant: 'XUV700',
+    insurance: 'Valid',
     acAvailable: true,
     price: 2150000,
     numberOfOwners: 1,
@@ -190,8 +190,8 @@ const DEMO_CARS = [
   {
     name: 'Tata Nexon EV Max',
     brand: 'Tata',
-    model: 'Nexon EV',
-    carNumber: 'MH12MN9753',
+    variant: 'Nexon EV',
+    insurance: 'Valid',
     acAvailable: true,
     price: 1150000,
     numberOfOwners: 1,
@@ -212,8 +212,8 @@ const DEMO_CARS = [
   {
     name: 'Maruti Swift LXi (Non-AC Trim)',
     brand: 'Maruti Suzuki',
-    model: 'Swift',
-    carNumber: 'MH15OP2468',
+    variant: 'Swift',
+    insurance: 'Lapsed',
     acAvailable: false,
     price: 310000,
     numberOfOwners: 3,
@@ -254,7 +254,7 @@ async function main() {
   }
 
   for (const car of DEMO_CARS) {
-    const existing = await prisma.car.findUnique({ where: { carNumber: car.carNumber } });
+    const existing = await prisma.car.findFirst({ where: { name: car.name } });
     if (existing) {
       console.log(`↩︎  ${car.name} already seeded.`);
       continue;
@@ -263,8 +263,8 @@ async function main() {
       data: {
         name: car.name,
         brand: car.brand,
-        model: car.model,
-        carNumber: car.carNumber,
+        variant: car.variant,
+        insurance: car.insurance,
         acAvailable: car.acAvailable,
         price: car.price,
         numberOfOwners: car.numberOfOwners,
@@ -281,7 +281,7 @@ async function main() {
           create: car.images.map((imageUrl, i) => ({
             imageUrl,
             sortOrder: i,
-            publicId: `seed-${car.carNumber.toLowerCase()}-${i}`,
+            publicId: `seed-${car.name.toLowerCase().replace(/\s+/g, '-')}-${i}`,
           })),
         },
       },

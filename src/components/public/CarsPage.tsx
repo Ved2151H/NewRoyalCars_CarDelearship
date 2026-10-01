@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import { motion } from 'motion/react';
 import { Car, FilterState } from '../../types';
 import { CarCard } from './CarCard';
@@ -36,11 +37,14 @@ export const CarsPage: React.FC<CarsPageProps> = ({
       {/* Banner strip with car image */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0">
-          <img
+          <Image
             src={BANNER_IMAGE}
             alt=""
             aria-hidden
-            className="w-full h-full object-cover object-center opacity-25 grayscale brightness-[0.6]"
+            fill
+            sizes="100vw"
+            priority
+            className="object-cover object-center opacity-25 grayscale brightness-[0.6]"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-[#050607]/60 via-[#050607]/80 to-[#050607]" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#050607] via-transparent to-[#050607]/80" />

@@ -54,6 +54,9 @@ export interface PresignedUpload {
 export const MAX_IMAGE_BYTES = 50 * 1024 * 1024; // 50 MB per image
 export const MAX_IMAGES_PER_CAR = 10;
 
+/** Cache header applied to every uploaded car photo (immutable objects). */
+const CACHE_IMMUTABLE = 'public, max-age=31536000, immutable';
+
 /** Bytes accepted by the image endpoints (validated again by magic bytes). */
 export const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 
@@ -149,14 +152,16 @@ export async function createPresignedUpload(
   const ext = EXT_BY_MIME[contentType] ?? '.jpg';
   const key = `cars/${Date.now()}-${randomBytes(6).toString('hex')}${ext}`;
 
-  // Sign ONLY Bucket/Key/ContentType. Do NOT sign ContentLength or CacheControl:
-  // presigned-PUT signatures must match the browser's request exactly, and the
-  // browser's fetch sets neither header automatically (Content-Length is
-  // controlled by the network stack; extra signed headers would break it).
+  // Sign Bucket/Key/ContentType/CacheControl. Presigned-PUT signatures must
+  // match the browser's request exactly, so CacheControl is signed AND sent
+  // explicitly by the uploader (XHR) — this marks every car photo as
+  // immutable at the storage/CDN edge for a year. Content-Length is never
+  // signed (the network stack owns it).
   const command = new PutObjectCommand({
     Bucket: cfg.bucket,
     Key: key,
     ContentType: contentType,
+    CacheControl: CACHE_IMMUTABLE,
   });
   const uploadUrl = await getSignedUrl(getS3(), command, { expiresIn: 300 });
 
@@ -164,6 +169,7 @@ export async function createPresignedUpload(
     uploadUrl,
     headers: {
       'Content-Type': contentType,
+      'Cache-Control': CACHE_IMMUTABLE,
     },
     publicId: key,
     publicUrl: neonPublicUrl(cfg.endpoint, cfg.bucket, key),

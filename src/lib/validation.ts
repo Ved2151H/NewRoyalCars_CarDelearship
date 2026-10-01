@@ -5,8 +5,19 @@ import { z } from 'zod';
 export const carStatusSchema = z.enum(['AVAILABLE', 'UNAVAILABLE', 'SOLD']);
 export const enquiryStatusSchema = z.enum(['NEW', 'CONTACTED', 'BOOKED', 'CLOSED', 'REJECTED']);
 
-export const FUEL_TYPES = ['Petrol', 'Diesel', 'CNG', 'Electric', 'Hybrid'] as const;
+export const FUEL_TYPES = [
+  'Petrol',
+  'Diesel',
+  'CNG',
+  'Electric',
+  'Hybrid',
+  'Petrol + CNG',
+  'Petrol + LPG',
+] as const;
 export const TRANSMISSIONS = ['Manual', 'Automatic'] as const;
+
+/** Insurance validity options shown in the Add Car dropdown. */
+export const INSURANCE_OPTIONS = ['Valid', 'Lapsed'] as const;
 
 /* ------------------------- car ------------------------- */
 
@@ -18,15 +29,7 @@ const indiaPhone = z
 export const carInputSchema = z.object({
   name: z.string().trim().min(2, 'Name is required').max(80),
   brand: z.string().trim().min(2, 'Brand is required').max(40),
-  model: z.string().trim().min(1, 'Model is required').max(40),
-  carNumber: z
-    .string()
-    .trim()
-    .toUpperCase()
-    .regex(
-      /^[A-Z]{2}[- ]?\d{1,2}[- ]?[A-Z]{0,3}[- ]?\d{1,4}$/,
-      'Enter a valid Indian RC number (e.g. MH20AB1234)'
-    ),
+  variant: z.string().trim().min(1, 'Variant is required').max(40),
   acAvailable: z.boolean(),
   price: z.number().int().min(50000, 'Price looks too low').max(100000000, 'Price looks too high'),
   numberOfOwners: z.number().int().min(1).max(6),
@@ -34,6 +37,7 @@ export const carInputSchema = z.object({
   kmTo: z.number().int().min(0).max(1000000),
   fuelType: z.enum(FUEL_TYPES),
   transmission: z.enum(TRANSMISSIONS),
+  insurance: z.enum(INSURANCE_OPTIONS).optional().or(z.literal('')),
   year: z
     .number()
     .int()

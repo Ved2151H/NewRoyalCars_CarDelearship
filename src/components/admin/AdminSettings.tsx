@@ -106,7 +106,7 @@ export const AdminSettings: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-neutral-300 font-medium mb-1">
+              <label className="block text-xs text-white font-bold mb-1">
                 Dealership Brand Name
               </label>
               <input
@@ -118,7 +118,7 @@ export const AdminSettings: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs text-neutral-300 font-medium mb-1">
+              <label className="block text-xs text-white font-bold mb-1">
                 Primary Hotline Phone
               </label>
               <input
@@ -131,7 +131,7 @@ export const AdminSettings: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs text-neutral-300 font-medium mb-1">
+              <label className="block text-xs text-white font-bold mb-1">
                 Official VIP Concierge Email
               </label>
               <input
@@ -143,7 +143,7 @@ export const AdminSettings: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs text-neutral-300 font-medium mb-1">
+              <label className="block text-xs text-white font-bold mb-1">
                 WhatsApp Number (optional)
               </label>
               <input
@@ -156,7 +156,7 @@ export const AdminSettings: React.FC = () => {
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block text-xs text-neutral-300 font-medium mb-1">
+              <label className="block text-xs text-white font-bold mb-1">
                 Dealership Address
               </label>
               <input
@@ -168,7 +168,7 @@ export const AdminSettings: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs text-neutral-300 font-medium mb-1">
+              <label className="block text-xs text-white font-bold mb-1">
                 Business Hours
               </label>
               <input
@@ -181,7 +181,7 @@ export const AdminSettings: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs text-neutral-300 font-medium mb-1">
+              <label className="block text-xs text-white font-bold mb-1">
                 Google Maps / Location URL (optional)
               </label>
               <input

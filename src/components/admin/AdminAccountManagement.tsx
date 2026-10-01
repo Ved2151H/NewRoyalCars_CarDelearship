@@ -41,7 +41,7 @@ interface AdminRow {
 const inputCls =
   'w-full px-3 py-2 rounded-xl bg-black/50 border border-white/10 text-white text-sm placeholder:text-neutral-600 focus:outline-none focus:border-white/60';
 
-const labelCls = 'block text-xs text-neutral-300 font-medium mb-1';
+const labelCls = 'block text-xs text-white font-bold mb-1';
 
 export const AdminAccountManagement: React.FC<{
   onSessionRefreshed: (email: string, name?: string) => void;

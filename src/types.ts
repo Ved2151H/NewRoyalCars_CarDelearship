@@ -1,13 +1,20 @@
-export type FuelType = 'Petrol' | 'Diesel' | 'CNG' | 'Electric' | 'Hybrid';
+export type FuelType =
+  | 'Petrol'
+  | 'Diesel'
+  | 'CNG'
+  | 'Electric'
+  | 'Hybrid'
+  | 'Petrol + CNG'
+  | 'Petrol + LPG';
 export type TransmissionType = 'Manual' | 'Automatic';
-export type CarAvailability = 'Available' | 'Reserved' | 'Sold';
+export type CarAvailability = 'Available' | 'Booked' | 'Sold';
+export type InsuranceStatus = 'Valid' | 'Lapsed';
 
 export interface Car {
   id: string;
   name: string;
   brand: string;
-  model: string;
-  carNumber: string;
+  variant: string;
   price: number;
   formattedPrice: string;
   ac: boolean;
@@ -17,6 +24,7 @@ export interface Car {
   fuel: FuelType;
   transmission: TransmissionType;
   year: number;
+  insurance: string;
   availability: CarAvailability;
   images: string[];
   description: string;

@@ -79,8 +79,7 @@ export async function saveCarAction(
     const payload = {
       name: data.name,
       brand: data.brand,
-      model: data.model,
-      carNumber: data.carNumber,
+      variant: data.variant,
       acAvailable: data.acAvailable,
       price: data.price,
       numberOfOwners: data.numberOfOwners,
@@ -89,6 +88,7 @@ export async function saveCarAction(
       fuelType: data.fuelType,
       transmission: data.transmission,
       year: data.year,
+      insurance: data.insurance || null,
       description: data.description || null,
       status: data.status,
       features: data.features,
@@ -116,11 +116,6 @@ export async function saveCarAction(
         include: { images: true },
       });
       if (!existing) return { ok: false, error: 'Car not found.' };
-
-      const dupe = await prisma.car.findFirst({
-        where: { carNumber: data.carNumber, NOT: { id: existingId } },
-      });
-      if (dupe) return { ok: false, error: 'Another car already uses this RC number.' };
 
       // Compute removals outside the transaction so storage cleanup can run
       // after the DB commit.
@@ -168,9 +163,6 @@ export async function saveCarAction(
     }
 
     // Create
-    const dupe = await prisma.car.findUnique({ where: { carNumber: data.carNumber } });
-    if (dupe) return { ok: false, error: 'A car with this RC number already exists.' };
-
     const created = await prisma.car.create({
       data: {
         ...payload,
@@ -218,7 +210,7 @@ export async function deleteCarAction(carId: string): Promise<ActionResult> {
 
 export async function updateAvailabilityAction(
   carId: string,
-  availability: 'Available' | 'Reserved' | 'Sold'
+  availability: 'Available' | 'Booked' | 'Sold'
 ): Promise<ActionResult> {
   try {
     await requireAdmin();
@@ -408,8 +400,7 @@ export async function getCarsAction(filter?: PublicCarFilter): Promise<ActionRes
       where.OR = [
         { name: { contains: q, mode: 'insensitive' } },
         { brand: { contains: q, mode: 'insensitive' } },
-        { model: { contains: q, mode: 'insensitive' } },
-        { carNumber: { contains: q, mode: 'insensitive' } },
+        { variant: { contains: q, mode: 'insensitive' } },
       ];
     }
 

@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import { AnimatePresence, motion } from 'motion/react';
 import { Car } from '../../types';
 import { formatKm } from '../../lib/utils';
 import { GlassButton } from '../common/GlassButton';
+import { ZoomableCarImage } from './ZoomableCarImage';
 import {
   ChevronLeft,
   ChevronRight,
   Heart,
+  RotateCw,
+  Pause,
   Phone,
   Snowflake,
   Users,
@@ -14,7 +18,9 @@ import {
   Fuel,
   Cog,
   Calendar,
-  Hash,
+  ShieldCheck,
+  CarFront,
+  Palette,
   CheckCircle2,
 } from 'lucide-react';
 
@@ -47,9 +53,64 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [tab, setTab] = useState<DetailTab>('overview');
 
+  /* ------------------ Automatic photo rotation (slideshow) ------------------
+   * Cycles 1 → 2 → … → N → 1 every second with a crossfade. Pauses while the
+   * pointer is over the viewer and for a few seconds after any manual
+   * interaction (arrows/thumbnails/zoom/pan). Once the user takes over via a
+   * control, the slideshow stays off until they re-enable the toggle.
+   */
+  const ROTATE_MS = 1000;
+  const RESUME_MS = 4000;
+  const [slideshowOn, setSlideshowOn] = useState(true);
+  const hoverPauseRef = useRef(false); // pointer resting on the viewer
+  const interactionPauseUntilRef = useRef(0); // brief pause after interaction
+  // Set synchronously on manual photo selection so a pending interval tick can
+  // never fire one stale advance after the user takes over (React clears the
+  // interval on the NEXT render — the ref guards that gap).
+  const manualOverrideRef = useRef(false);
+  const imagesLength = car.images.length;
+
+  const selectImage = useCallback(
+    (idx: number) => {
+      manualOverrideRef.current = true;
+      setActiveImageIndex(idx);
+      if (imagesLength > 1) {
+        // A deliberate photo choice means the user is steering — stop the
+        // automatic rotation until they re-enable it.
+        setSlideshowOn(false);
+      }
+    },
+    [imagesLength]
+  );
+
+  /** Fired by the viewer on zoom/pan/dbl-click — pause without hijacking. */
+  const handleViewerInteract = useCallback(() => {
+    interactionPauseUntilRef.current = Date.now() + RESUME_MS;
+  }, [RESUME_MS]);
+
+  useEffect(() => {
+    if (!slideshowOn || imagesLength <= 1) return;
+    const id = setInterval(() => {
+      if (manualOverrideRef.current) return;
+      if (hoverPauseRef.current || Date.now() < interactionPauseUntilRef.current) return;
+      setActiveImageIndex((p) => (p + 1) % imagesLength);
+    }, ROTATE_MS);
+    return () => clearInterval(id);
+  }, [slideshowOn, imagesLength, ROTATE_MS]);
+
+  const toggleSlideshow = useCallback(() => {
+    manualOverrideRef.current = false; // fresh start when re-enabled
+    setSlideshowOn((s) => !s);
+  }, []);
+
+  // Preload only the NEXT optimized photo so the crossfade is instant
+  // without downloading the whole gallery up front.
+  const nextImage = imagesLength > 1 ? car.images[(activeImageIndex + 1) % imagesLength] : null;
+
   const specs = [
-    { icon: <Hash className="w-4 h-4" />, label: 'Car Number', value: car.carNumber },
+    { icon: <CarFront className="w-4 h-4" />, label: 'Variant', value: car.variant },
     { icon: <Snowflake className="w-4 h-4" />, label: 'AC', value: car.ac ? 'Yes' : 'No' },
+    { icon: <ShieldCheck className="w-4 h-4" />, label: 'Insurance', value: car.insurance },
     { icon: <Users className="w-4 h-4" />, label: 'Number of Owners', value: String(car.owners) },
     {
       icon: <Gauge className="w-4 h-4" />,
@@ -61,6 +122,7 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
     },
     { icon: <Fuel className="w-4 h-4" />, label: 'Fuel Type', value: car.fuel },
     { icon: <Cog className="w-4 h-4" />, label: 'Transmission', value: car.transmission },
+    { icon: <Palette className="w-4 h-4" />, label: 'Colour', value: car.color },
     { icon: <Calendar className="w-4 h-4" />, label: 'Year', value: String(car.year) },
   ];
 
@@ -93,26 +155,34 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
           transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
           className="lg:col-span-7 min-w-0"
         >
-          {/* Main image */}
-          <div className="relative h-72 sm:h-96 lg:h-[420px] rounded-2xl overflow-hidden glass-card group">
-            <AnimatePresence mode="wait">
-              {car.images.length > 0 && (
-                <motion.img
-                  key={activeImageIndex}
-                  initial={{ opacity: 0, scale: 1.05, filter: 'blur(8px)' }}
-                  animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                  exit={{ opacity: 0, scale: 0.98, filter: 'blur(5px)' }}
-                  transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+          {/* Main image — fixed frame; the photo always FITS (object-contain,
+              no crop/stretch), with Amazon-style zoom + pan inside the frame. */}
+          <div className="relative">
+            {car.images.length > 0 ? (
+              <div
+                onMouseEnter={() => {
+                  hoverPauseRef.current = true;
+                }}
+                onMouseLeave={() => {
+                  hoverPauseRef.current = false;
+                }}
+              >
+                <ZoomableCarImage
                   src={car.images[activeImageIndex] || car.images[0]}
                   alt={`${car.name} — view ${activeImageIndex + 1}`}
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                  className="absolute inset-0 w-full h-full object-cover object-center"
+                  srcKey={activeImageIndex}
+                  priority
+                  sizes="(max-width: 1024px) 100vw, 58vw"
+                  className="h-72 sm:h-96 lg:h-[420px]"
+                  onUserInteract={handleViewerInteract}
                 />
-              )}
-            </AnimatePresence>
+              </div>
+            ) : (
+              <div className="relative h-72 sm:h-96 lg:h-[420px] rounded-2xl overflow-hidden glass-card" />
+            )}
 
             {/* Grade */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20 pointer-events-none" />
+            <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-t from-black/50 via-transparent to-black/20" />
 
             {/* Favorite */}
             <button
@@ -127,13 +197,23 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
               <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
             </button>
 
+            {/* Slideshow toggle */}
+            {car.images.length > 1 && (
+              <button
+                onClick={toggleSlideshow}
+                aria-label={slideshowOn ? 'Pause automatic rotation' : 'Start automatic rotation'}
+                title={slideshowOn ? 'Pause automatic rotation' : 'Start automatic rotation'}
+                className="absolute top-4 right-16 p-2.5 rounded-full backdrop-blur-md border transition-all duration-300 cursor-pointer bg-black/45 border-white/20 text-white hover:bg-black/70"
+              >
+                {slideshowOn ? <Pause className="w-4 h-4" /> : <RotateCw className="w-4 h-4" />}
+              </button>
+            )}
+
             {/* Prev / Next */}
             {car.images.length > 1 && (
               <>
                 <button
-                  onClick={() =>
-                    setActiveImageIndex((p) => (p === 0 ? car.images.length - 1 : p - 1))
-                  }
+                  onClick={() => selectImage(activeImageIndex === 0 ? car.images.length - 1 : activeImageIndex - 1)}
                   aria-label="Previous image"
                   className="absolute left-3 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-black/55 hover:bg-black/80 text-white backdrop-blur-md border border-white/15 transition-all duration-300 opacity-75 group-hover:opacity-100 cursor-pointer"
                 >
@@ -141,7 +221,7 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
                 </button>
                 <button
                   onClick={() =>
-                    setActiveImageIndex((p) => (p === car.images.length - 1 ? 0 : p + 1))
+                    selectImage(activeImageIndex === car.images.length - 1 ? 0 : activeImageIndex + 1)
                   }
                   aria-label="Next image"
                   className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-black/55 hover:bg-black/80 text-white backdrop-blur-md border border-white/15 transition-all duration-300 opacity-75 group-hover:opacity-100 cursor-pointer"
@@ -151,9 +231,9 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
               </>
             )}
 
-            {/* Counter */}
+            {/* Counter — bottom-left; the zoom controls occupy bottom-right */}
             {car.images.length > 0 && (
-              <div className="absolute bottom-3 right-4 px-2.5 py-1 rounded-md bg-black/65 backdrop-blur-md text-xs font-mono text-neutral-200 border border-white/10">
+              <div className="absolute bottom-3 left-4 px-2.5 py-1 rounded-md bg-black/65 backdrop-blur-md text-xs font-mono text-neutral-200 border border-white/10">
                 {activeImageIndex + 1} / {car.images.length}
               </div>
             )}
@@ -164,7 +244,7 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
             {car.images.map((img, idx) => (
               <motion.button
                 key={idx}
-                onClick={() => setActiveImageIndex(idx)}
+                onClick={() => selectImage(idx)}
                 whileHover={{ y: -3 }}
                 transition={{ duration: 0.25 }}
                 className={`relative w-24 h-16 rounded-xl overflow-hidden shrink-0 border transition-all duration-300 cursor-pointer ${
@@ -172,16 +252,33 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
                     ? 'border-white/70 shadow-[0_0_18px_rgba(255,255,255,0.15)]'
                     : 'border-white/10 opacity-60 hover:opacity-100'
                 }`}
-              >
-                <img
-                  src={img}
-                  alt={`Thumbnail ${idx + 1}`}
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                  className="w-full h-full object-cover"
-                />
+              >                  <Image
+                    src={img}
+                    alt={`Thumbnail ${idx + 1}`}
+                    fill
+                    sizes="96px"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    className="object-contain p-0.5"
+                  />
               </motion.button>
             ))}
           </div>
+
+          {/* Preload only the NEXT optimized photo (same responsive `sizes` as
+              the viewer, so it's a true cache hit) — the crossfade is instant
+              without downloading the whole gallery up front. */}
+          {nextImage && (
+            <div className="sr-only" aria-hidden>
+              <Image
+                src={nextImage}
+                alt=""
+                width={320}
+                height={180}
+                sizes="(max-width: 1024px) 100vw, 58vw"
+                loading="eager"
+              />
+            </div>
+          )}
         </motion.div>
 
         {/* Info panel (5 cols) */}
@@ -200,7 +297,7 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
               className={`mt-2 sm:mt-0 self-start px-3 py-1 rounded-full text-[11px] font-semibold tracking-wide whitespace-nowrap ${
                 car.availability === 'Available'
                   ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-400/30'
-                  : car.availability === 'Reserved'
+                  : car.availability === 'Booked'
                   ? 'bg-white/10 text-neutral-300 border border-white/20'
                   : 'bg-red-500/15 text-red-300 border border-red-400/30'
               }`}
@@ -354,18 +451,20 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
                   <motion.button
                     key={idx}
                     onClick={() => {
-                      setActiveImageIndex(idx);
+                      selectImage(idx);
                       window.scrollTo({ top: 0, behavior: 'smooth' });
                     }}
                     whileHover={{ scale: 1.02 }}
                     transition={{ duration: 0.3 }}
                     className="relative h-40 rounded-xl overflow-hidden border border-white/10 group cursor-pointer"
                   >
-                    <img
+                    <Image
                       src={img}
                       alt={`Gallery image ${idx + 1}`}
+                      fill
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 380px"
                       onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      className="object-contain p-2 transition-transform duration-700 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors duration-300" />
                   </motion.button>

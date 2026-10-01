@@ -156,6 +156,8 @@ export const CarFilters: React.FC<CarFiltersProps> = ({
                     { value: 'CNG', label: 'CNG' },
                     { value: 'Electric', label: 'Electric' },
                     { value: 'Hybrid', label: 'Hybrid' },
+                    { value: 'Petrol + CNG', label: 'Petrol + CNG' },
+                    { value: 'Petrol + LPG', label: 'Petrol + LPG' },
                   ]}
                 />
               </div>

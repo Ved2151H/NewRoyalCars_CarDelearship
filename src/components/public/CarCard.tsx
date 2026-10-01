@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import Image from 'next/image';
 import { motion, useMotionValue, useSpring, useTransform } from 'motion/react';
 import { Car } from '../../types';
 import { formatKm } from '../../lib/utils';
@@ -100,12 +101,13 @@ export const CarCard: React.FC<CarCardProps> = ({
         className="relative h-48 sm:h-52 overflow-hidden"
       >
         {car.images.length > 0 && (
-          <img
+          <Image
             src={car.images[0]}
             alt={car.name}
-            loading="lazy"
+            fill
+            sizes="(max-width: 640px) 92vw, (max-width: 1280px) 45vw, 320px"
             onError={(e) => { e.currentTarget.style.display = 'none'; }}
-            className="w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-[1.06]"
+            className="object-contain object-center p-2 transition-transform duration-700 ease-out group-hover:scale-[1.06]"
           />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0c0d] via-transparent to-transparent pointer-events-none" />

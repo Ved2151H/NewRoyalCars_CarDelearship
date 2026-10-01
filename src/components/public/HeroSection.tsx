@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import Image from 'next/image';
 import { motion, useScroll, useTransform, useSpring, useMotionValue } from 'motion/react';
 import { GlassButton } from '../common/GlassButton';
 import { ArrowRight, ArrowDown } from 'lucide-react';
@@ -172,9 +173,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
               <div className="relative overflow-hidden rounded-2xl border border-white/10 shadow-[0_40px_100px_rgba(0,0,0,0.85)] group bg-[#0a0c0d]">
                 {heroImage && (
-                  <img
+                  <Image
                     src={heroImage}
                     alt="New Royal Cars premium fleet"
+                    width={1200}
+                    height={800}
+                    priority
+                    sizes="(max-width: 1024px) 100vw, 620px"
                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     className="w-full h-[260px] sm:h-[380px] lg:h-[440px] object-cover object-center grayscale-[0.35] transition-transform duration-[1.2s] ease-out group-hover:scale-105"
                   />

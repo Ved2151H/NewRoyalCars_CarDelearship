@@ -97,7 +97,7 @@ export const AdminCustomers: React.FC<AdminCustomersProps> = ({ enquiries }) => 
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
           <input
             type="text"
-            placeholder="Search by name, phone, interested model..."
+            placeholder="Search by name, phone, interested variant..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2 rounded-xl bg-black/50 border border-white/10 text-white placeholder-neutral-500 text-sm focus:outline-none focus:border-white/60"
@@ -176,7 +176,7 @@ export const AdminCustomers: React.FC<AdminCustomersProps> = ({ enquiries }) => 
 
                 <div className="mt-4 p-2.5 rounded-xl bg-black/40 border border-white/5 text-xs">
                   <span className="text-[10px] uppercase tracking-wider text-neutral-400 block mb-0.5">
-                    Interested Model
+                    Interested Variant
                   </span>
                   <span className="font-semibold text-neutral-200">{cust.interestedCar}</span>
                 </div>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { motion } from 'motion/react';
 import { Car, CarAvailability } from '../../types';
 import { ConfirmationModal } from './ConfirmationModal';
@@ -39,8 +40,7 @@ export const AdminManageCars: React.FC<AdminManageCarsProps> = ({
   const filteredCars = cars.filter((car) => {
     const matchesSearch =
       car.name.toLowerCase().includes(search.toLowerCase()) ||
-      car.carNumber.toLowerCase().includes(search.toLowerCase()) ||
-      car.model.toLowerCase().includes(search.toLowerCase());
+      car.variant.toLowerCase().includes(search.toLowerCase());
     const matchesStatus =
       filterAvailability === 'all' || car.availability === filterAvailability;
     return matchesSearch && matchesStatus;
@@ -85,7 +85,7 @@ export const AdminManageCars: React.FC<AdminManageCarsProps> = ({
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
           <input
             type="text"
-            placeholder="Search by car name, RC number (e.g. MH20AB1234)..."
+            placeholder="Search by car name or variant..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2 rounded-xl bg-black/50 border border-white/10 text-white placeholder-neutral-500 text-sm focus:outline-none focus:border-white/60"
@@ -105,7 +105,7 @@ export const AdminManageCars: React.FC<AdminManageCarsProps> = ({
             options={[
               { value: 'all', label: `All Statuses (${cars.length})` },
               { value: 'Available', label: 'Available' },
-              { value: 'Reserved', label: 'Reserved' },
+              { value: 'Booked', label: 'Booked' },
               { value: 'Sold', label: 'Sold' },
             ]}
           />
@@ -145,7 +145,7 @@ export const AdminManageCars: React.FC<AdminManageCarsProps> = ({
               <thead>
                 <tr className="border-b border-white/10 bg-black/30 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
                   <th className="py-3.5 px-4">Vehicle</th>
-                  <th className="py-3.5 px-4">RC Number</th>
+                  <th className="py-3.5 px-4">Variant</th>
                   <th className="py-3.5 px-4">AC Status</th>
                   <th className="py-3.5 px-4">KM Driven</th>
                   <th className="py-3.5 px-4">Price</th>
@@ -170,9 +170,12 @@ export const AdminManageCars: React.FC<AdminManageCarsProps> = ({
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
                         {car.images.length > 0 ? (
-                          <img
+                          <Image
                             src={car.images[0]}
                             alt={car.name}
+                            width={56}
+                            height={44}
+                            sizes="56px"
                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             className="w-14 h-11 object-cover rounded-lg border border-white/10 shrink-0"
                           />
@@ -190,9 +193,9 @@ export const AdminManageCars: React.FC<AdminManageCarsProps> = ({
                       </div>
                     </td>
 
-                    {/* RC */}
+                    {/* Variant */}
                     <td className="py-3 px-4 font-mono font-semibold text-neutral-200">
-                      {car.carNumber}
+                      {car.variant}
                     </td>
 
                     {/* AC */}
@@ -232,13 +235,13 @@ export const AdminManageCars: React.FC<AdminManageCarsProps> = ({
                           className={`px-2.5 py-1 pr-8 rounded-lg text-xs font-semibold cursor-pointer border text-left focus:outline-none transition-colors ${
                             car.availability === 'Available'
                               ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40'
-                              : car.availability === 'Reserved'
+                              : car.availability === 'Booked'
                               ? 'bg-white/[0.08] text-neutral-300 border-white/25'
                               : 'bg-rose-950/60 text-rose-300 border-rose-500/40'
                           }`}
                           options={[
                             { value: 'Available', label: 'Available' },
-                            { value: 'Reserved', label: 'Reserved' },
+                            { value: 'Booked', label: 'Booked' },
                             { value: 'Sold', label: 'Sold' },
                           ]}
                         />
@@ -294,7 +297,7 @@ export const AdminManageCars: React.FC<AdminManageCarsProps> = ({
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleConfirmDelete}
         title="Confirm Vehicle Deletion"
-        message={`Are you sure you want to remove ${deleteTarget?.name} (${deleteTarget?.carNumber}) from the dealership showcase? This will immediately remove it from public view.`}
+        message={`Are you sure you want to remove ${deleteTarget?.name} from the dealership showcase? This will immediately remove it from public view.`}
       />
     </div>
   );

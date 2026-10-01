@@ -10,7 +10,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onExploreCars }) => {
   const values = [
     {
       icon: <ShieldCheck className="w-5 h-5" />,
-      title: 'Certified Quality',
+      title: 'Certified Quality Cars',
       desc: 'Every car passes a rigorous multi-point inspection before it earns a place in our dealership.',
     },
     {
@@ -71,15 +71,16 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onExploreCars }) => {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.7 }}
-        className="mt-14 rounded-3xl glass-panel p-10 grid grid-cols-2 md:grid-cols-4 gap-8 text-center"
+        className="mt-14 rounded-3xl glass-panel p-10 grid grid-cols-2 md:grid-cols-5 gap-8 text-center"
       >
         {[
-          ['500+', 'Happy Customers'],
+          ['Since 2016', 'Experience'],
+          ['1000+', 'Happy Customers'],
           ['100%', 'Verified Cars'],
           ['Best', 'Prices in the Market'],
-          ['24x7', 'After-Sales Support'],
-        ].map(([v, l]) => (
-          <div key={l}>
+          ['After Sales', 'Service'],
+        ].map(([v, l], i) => (
+          <div key={l} className={i === 4 ? 'col-span-2 md:col-span-1' : undefined}>
             <div className="font-serif text-3xl font-semibold text-white">{v}</div>
             <div className="text-xs text-neutral-400 mt-1">{l}</div>
           </div>

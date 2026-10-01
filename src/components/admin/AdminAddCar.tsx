@@ -1,6 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'motion/react';
 import { Car, FuelType, TransmissionType, CarAvailability } from '../../types';
+import { optimizeImage, toWebpName } from '../../lib/image-optimize';
+import { uploadAll, type QueueItem, type PresignGrant } from '../../lib/upload-queue';
 import { GlassButton } from '../common/GlassButton';
 import { GlassSelect } from '../common/GlassSelect';
 import {
@@ -37,6 +40,17 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'
 const MAX_FILE_MB = 50;
 const MAX_PHOTOS = 10;
 
+/**
+ * The mobile Add Car flow has no Brand input — infer the brand from the first
+ * word of the car name (e.g. "Hyundai Santro" → "Hyundai") so validation and
+ * the public brand filter keep working without exposing the field.
+ */
+function deriveBrandFromName(name: string): string {
+  const trimmed = name.trim();
+  const firstWord = trimmed.split(/\s+/)[0] || '';
+  return firstWord.length >= 2 ? firstWord : trimmed;
+}
+
 export const AdminAddCar: React.FC<AdminAddCarProps> = ({
   initialCar,
   onSaveCar,
@@ -44,11 +58,21 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
 }) => {
   const isEditing = Boolean(initialCar);
 
+  // Below Tailwind's `md` breakpoint the form renders one simplified mobile
+  // flow; at `md` and up the original sectioned desktop layout is kept.
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const update = () => setIsDesktop(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
   // All fields start blank — zero dummy/placeholder data is prefilled.
   const [name, setName] = useState(initialCar?.name || '');
   const [brand, setBrand] = useState(initialCar?.brand || '');
-  const [model, setModel] = useState(initialCar?.model || '');
-  const [carNumber, setCarNumber] = useState(initialCar?.carNumber || '');
+  const [variant, setVariant] = useState(initialCar?.variant || '');
   const [price, setPrice] = useState<number | ''>(initialCar?.price || '');
   const [ac, setAc] = useState<boolean>(initialCar ? initialCar.ac : true);
   const [owners, setOwners] = useState<number>(initialCar?.owners || 1);
@@ -58,6 +82,9 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
     initialCar?.transmission || 'Manual'
   );
   const [year, setYear] = useState<number | ''>(initialCar?.year || '');
+  const [insurance, setInsurance] = useState<string>(
+    initialCar && initialCar.insurance !== 'Not specified' ? initialCar.insurance : ''
+  );
   const [availability, setAvailability] = useState<CarAvailability>(
     initialCar?.availability || 'Available'
   );
@@ -80,9 +107,11 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(
-    null
-  );
+  const [uploadProgress, setUploadProgress] = useState<{
+    done: number;
+    total: number;
+    percent: number;
+  } | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [shakeError, setShakeError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -166,41 +195,19 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
     }
   };
 
-  const uploadOne = async (file: File): Promise<PhotoItem> => {
+  /** Presign one photo (cheap JSON call); bytes never touch this server. */
+  const presignFor = async (blob: Blob, fileName: string): Promise<PresignGrant> => {
     const qs = new URLSearchParams({
-      name: file.name,
-      contentType: file.type || 'image/jpeg',
-      size: String(file.size),
+      name: fileName,
+      contentType: blob.type || 'image/webp',
+      size: String(blob.size),
     });
-    let presignRes: Response;
-    try {
-      presignRes = await fetchWithRetry(`/api/images/upload?${qs.toString()}`);
-    } catch {
-      throw new Error(
-        'Could not reach the server to start the upload. Check your connection and try again.'
-      );
+    const res = await fetchWithRetry(`/api/images/upload?${qs.toString()}`);
+    const json = await res.json().catch(() => null);
+    if (!res.ok || !json?.ok || !json.uploadUrl) {
+      throw new Error(json?.error || 'Could not start the upload.');
     }
-    const presign = await presignRes.json().catch(() => null);
-    if (!presignRes.ok || !presign?.ok || !presign.uploadUrl) {
-      throw new Error(presign?.error || 'Unable to upload the image. Please try again.');
-    }
-
-    let putRes: Response;
-    try {
-      putRes = await fetchWithRetry(presign.uploadUrl as string, {
-        method: 'PUT',
-        headers: presign.headers as Record<string, string>,
-        body: file,
-      });
-    } catch {
-      throw new Error(
-        'Upload to image storage failed — check your internet connection and try again.'
-      );
-    }
-    if (!putRes.ok) {
-      throw new Error('Unable to upload the image. Please try again.');
-    }
-    return { url: presign.publicUrl as string, publicId: presign.publicId as string };
+    return json as PresignGrant;
   };
 
   const handleFilesSelected = async (files: FileList | null) => {
@@ -248,16 +255,68 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
     }
 
     setUploading(true);
-    setUploadProgress({ done: 0, total: queue.length });
-    const uploaded: PhotoItem[] = [];
+    setUploadProgress({ done: 0, total: queue.length, percent: 0 });
     try {
-      // Sequential keeps progress honest and avoids provider rate limits.
-      for (let i = 0; i < queue.length; i++) {
-        const item = await uploadOne(queue[i]);
-        uploaded.push(item);
-        setUploadProgress({ done: i + 1, total: queue.length });
+      // 1. Compress each photo to WebP in the browser BEFORE any network
+      //    transfer — the original multi-MB file never leaves the device.
+      const compressed: QueueItem[] = [];
+      let sourceBytes = 0;
+      let optimizedBytes = 0;
+      const failedFiles: string[] = [];
+      for (const file of queue) {
+        try {
+          const opt = await optimizeImage(file);
+          sourceBytes += file.size;
+          optimizedBytes += opt.bytes;
+          compressed.push({
+            file: new File([opt.blob], toWebpName(file.name), { type: 'image/webp' }),
+            fileName: file.name,
+          });
+        } catch (compressErr) {
+          // Corrupt/undecodable photos are skipped, never uploaded broken.
+          failedFiles.push(file.name);
+          void compressErr;
+        }
       }
-      setPhotos((prev) => [...prev, ...uploaded]);
+
+      if (compressed.length > 0) {
+        // 2. Presign each, then upload 3 at a time with byte-weighted
+        //    progress. The progress UI contract is unchanged: same bar,
+        //    same "N / M photos uploaded" counter.
+        const results = await uploadAll(
+          compressed,
+          (item) => presignFor(item.file, item.fileName),
+          {
+            onProgress: (done, total) => {
+              const pct = Math.min(100, Math.round((done / total) * 100));
+              setUploadProgress((prev) =>
+                prev ? { ...prev, percent: Math.max(prev.percent, pct) } : prev
+              );
+            },
+            onOneDone: () => {
+              setUploadProgress((prev) => (prev ? { ...prev, done: prev.done + 1 } : prev));
+            },
+          }
+        );
+
+        // 3. Attach stored URLs + storage keys to the form's photo list.
+        const uploaded: PhotoItem[] = results.map((r) => ({ url: r.url, publicId: r.publicId }));
+        setPhotos((prev) => [...prev, ...uploaded]);
+
+        if (sourceBytes > 0) {
+          const saved = Math.max(0, Math.round((1 - optimizedBytes / sourceBytes) * 100));
+          console.info(
+            `[image-optimize] ${queue.length} photo(s): ${(sourceBytes / 1048576).toFixed(1)} MB → ${(optimizedBytes / 1048576).toFixed(2)} MB WebP (${saved}% smaller)`
+          );
+        }
+      }
+
+      if (failedFiles.length > 0) {
+        setFormError(
+          `${failedFiles.length} photo(s) could not be processed and were skipped: ${failedFiles.join(', ')}.`
+        );
+        setShakeError(true);
+      }
     } catch (err) {
       setFormError(
         err instanceof Error
@@ -282,12 +341,16 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
 
     const formattedPrice = `₹${numericPrice.toLocaleString('en-IN')}`;
 
+    // On mobile the Brand input is hidden — derive it from the car name for NEW
+    // cars only. Edits always keep the stored brand via existing state.
+    const brandValue =
+      brand.trim() || (!isDesktop && !isEditing ? deriveBrandFromName(name) : '');
+
     const newCar: Car = {
       id: initialCar ? initialCar.id : `car-${Date.now()}`,
       name: name.trim(),
-      brand: brand.trim(),
-      model: model.trim(),
-      carNumber: carNumber.trim().toUpperCase(),
+      brand: brandValue,
+      variant: variant.trim(),
       price: numericPrice,
       formattedPrice,
       ac,
@@ -297,6 +360,7 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
       fuel,
       transmission,
       year: numericYear,
+      insurance: insurance || 'Not specified',
       availability,
       images: photos.map((p) => p.url),
       description: description.trim(),
@@ -395,15 +459,172 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
 
       {/* Main Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* ================= MOBILE FLOW (< md) =================
+            One clean box with fields in the exact required order:
+            Name → Variant → Year → Owners → Transmission → KM → Insurance →
+            Price → AC. Description & Photos follow in the shared sections
+            below. Fields outside the list (Brand, Fuel Type, Exterior
+            Colour, Availability) are hidden on mobile only — desktop keeps
+            every original field and section. */}
+        <div className="md:hidden p-6 rounded-2xl bg-neutral-900/40 backdrop-blur-xl border border-white/10 shadow-xl space-y-4">
+          <div>
+            <label className="block text-xs text-white font-bold mb-1">
+              Car Name / Display Title *
+            </label>
+            <input
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Hyundai Santro"
+              className="w-full px-3 py-2 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:outline-none focus:border-white/60"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-white font-bold mb-1">Variant *</label>
+            <input
+              type="text"
+              required
+              value={variant}
+              onChange={(e) => setVariant(e.target.value)}
+              placeholder="e.g. Creta SX(O)"
+              className="w-full px-3 py-2 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:outline-none focus:border-white/60"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-white font-bold mb-1">
+              Manufacturing Year *
+            </label>
+            <input
+              type="number"
+              required
+              min={1950}
+              max={new Date().getFullYear() + 1}
+              value={year}
+              onChange={(e) => setYear(e.target.value === '' ? '' : Number(e.target.value))}
+              placeholder="e.g. 2021"
+              className="w-full px-3 py-2 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:outline-none focus:border-white/60"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-white font-bold mb-1">
+              Number of Owners *
+            </label>
+            <GlassSelect
+              value={String(owners)}
+              onChange={(v) => setOwners(Number(v))}
+              ariaLabel="Number of owners"
+              className="w-full px-3 py-2 pr-10 rounded-xl bg-black/50 border border-white/10 text-white text-sm text-left focus:outline-none focus:border-white/60 cursor-pointer"
+              options={[
+                { value: '1', label: '1 Owner' },
+                { value: '2', label: '2 Owners' },
+                { value: '3', label: '3 Owners' },
+                { value: '4', label: '4+ Owners' },
+              ]}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-white font-bold mb-1">
+              Transmission
+            </label>
+            <GlassSelect
+              value={transmission}
+              onChange={(v) => setTransmission(v as TransmissionType)}
+              ariaLabel="Transmission"
+              className="w-full px-3 py-2 pr-10 rounded-xl bg-black/50 border border-white/10 text-white text-sm text-left focus:outline-none focus:border-white/60 cursor-pointer"
+              options={[
+                { value: 'Manual', label: 'Manual' },
+                { value: 'Automatic', label: 'Automatic' },
+              ]}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-white font-bold mb-1">
+              KM Driven *
+            </label>
+            <input
+              type="number"
+              required
+              min={0}
+              value={kmFrom}
+              onChange={(e) => setKmFrom(e.target.value === '' ? '' : Number(e.target.value))}
+              placeholder="e.g. 45000"
+              className="w-full px-3 py-2 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:outline-none focus:border-white/60 font-mono"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-white font-bold mb-1">Insurance</label>
+            <GlassSelect
+              value={insurance}
+              onChange={setInsurance}
+              ariaLabel="Insurance status"
+              className="w-full px-3 py-2 pr-10 rounded-xl bg-black/50 border border-white/10 text-white text-sm text-left focus:outline-none focus:border-white/60 cursor-pointer"
+              options={[
+                { value: '', label: 'Select…' },
+                { value: 'Valid', label: 'Valid' },
+                { value: 'Lapsed', label: 'Lapsed' },
+              ]}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-white font-bold mb-1">
+              Price in INR (₹) *
+            </label>
+            <input
+              type="number"
+              required
+              min={0}
+              value={price}
+              onChange={(e) => setPrice(e.target.value === '' ? '' : Number(e.target.value))}
+              placeholder="e.g. 850000"
+              className="w-full px-3 py-2 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:outline-none focus:border-white/60 font-mono"
+            />
+          </div>
+
+          <div className="p-3 rounded-xl bg-black/40 border border-white/10">
+            <span className="text-xs text-white font-bold">AC Availability *</span>
+            <div className="flex gap-2 mt-2">
+              <button
+                type="button"
+                onClick={() => setAc(true)}
+                className={`flex-1 py-1 rounded-lg text-xs font-semibold transition-colors duration-300 ${
+                  ac ? 'bg-white text-black' : 'bg-white/5 text-neutral-400 hover:text-white'
+                }`}
+              >
+                Yes (AC)
+              </button>
+              <button
+                type="button"
+                onClick={() => setAc(false)}
+                className={`flex-1 py-1 rounded-lg text-xs font-semibold transition-colors duration-300 ${
+                  !ac
+                    ? 'bg-white text-black'
+                    : 'bg-white/5 text-neutral-400 hover:text-white'
+                }`}
+              >
+                Non-AC
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ============ Desktop sectioned layout (>= md) ============ */}
         {/* Core Specs Glass Box */}
-        <div className="p-6 rounded-2xl bg-neutral-900/40 backdrop-blur-xl border border-white/10 shadow-xl space-y-4">
+        <div className="hidden md:block p-6 rounded-2xl bg-neutral-900/40 backdrop-blur-xl border border-white/10 shadow-xl space-y-4">
           <h3 className="text-xs uppercase font-bold tracking-widest text-neutral-400 font-serif">
             Basic Identification &amp; Pricing
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs text-neutral-300 font-medium mb-1">
+              <label className="block text-xs text-white font-bold mb-1">
                 Car Name / Display Title *
               </label>
               <input
@@ -417,10 +638,10 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs text-neutral-300 font-medium mb-1">Brand *</label>
+              <label className="block text-xs text-white font-bold mb-1">Brand *</label>
               <input
                 type="text"
-                required
+                required={isDesktop}
                 value={brand}
                 onChange={(e) => setBrand(e.target.value)}
                 placeholder="e.g. Hyundai, Mercedes-Benz"
@@ -429,33 +650,19 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs text-neutral-300 font-medium mb-1">Model *</label>
+              <label className="block text-xs text-white font-bold mb-1">Variant *</label>
               <input
                 type="text"
                 required
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
+                value={variant}
+                onChange={(e) => setVariant(e.target.value)}
                 placeholder="e.g. Creta SX(O)"
                 className="w-full px-3 py-2 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:outline-none focus:border-white/60"
               />
             </div>
 
             <div>
-              <label className="block text-xs text-neutral-300 font-medium mb-1">
-                Car Number (RC / Plate) *
-              </label>
-              <input
-                type="text"
-                required
-                value={carNumber}
-                onChange={(e) => setCarNumber(e.target.value)}
-                placeholder="e.g. MH20AB1234"
-                className="w-full px-3 py-2 rounded-xl bg-black/50 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-white/60 uppercase"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-neutral-300 font-medium mb-1">
+              <label className="block text-xs text-white font-bold mb-1">
                 Price in INR (₹) *
               </label>
               <input
@@ -470,7 +677,7 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs text-neutral-300 font-medium mb-1">
+              <label className="block text-xs text-white font-bold mb-1">
                 Manufacturing Year *
               </label>
               <input
@@ -486,7 +693,7 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs text-neutral-300 font-medium mb-1">
+              <label className="block text-xs text-white font-bold mb-1">
                 Availability Status
               </label>
               <GlassSelect
@@ -496,7 +703,7 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
                 className="w-full px-3 py-2 pr-10 rounded-xl bg-black/50 border border-white/10 text-white text-sm text-left focus:outline-none focus:border-white/60 cursor-pointer"
                 options={[
                   { value: 'Available', label: 'Available' },
-                  { value: 'Reserved', label: 'Reserved' },
+                  { value: 'Booked', label: 'Booked' },
                   { value: 'Sold', label: 'Sold' },
                 ]}
               />
@@ -504,8 +711,10 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
           </div>
         </div>
 
-        {/* Technical & AC Status */}
-        <div className="p-6 rounded-2xl bg-neutral-900/40 backdrop-blur-xl border border-white/10 shadow-xl space-y-4">
+        {/* Technical & AC Status — desktop only; mobile covers these fields
+            in the simplified flow above (Fuel Type, Exterior Colour and
+            Availability stay desktop-only inputs; existing data is kept). */}
+        <div className="hidden md:block p-6 rounded-2xl bg-neutral-900/40 backdrop-blur-xl border border-white/10 shadow-xl space-y-4">
           <h3 className="text-xs uppercase font-bold tracking-widest text-neutral-400 font-serif">
             Technical &amp; Mileage Specifications
           </h3>
@@ -513,7 +722,7 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {/* AC Availability Toggle */}
             <div className="p-3 rounded-xl bg-black/40 border border-white/10 flex flex-col justify-between">
-              <span className="text-xs text-neutral-300 font-medium">AC Availability *</span>
+              <span className="text-xs text-white font-bold">AC Availability *</span>
               <div className="flex gap-2 mt-2">
                 <button
                   type="button"
@@ -539,7 +748,7 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs text-neutral-300 font-medium mb-1">
+              <label className="block text-xs text-white font-bold mb-1">
                 Number of Owners *
               </label>
               <GlassSelect
@@ -557,7 +766,7 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs text-neutral-300 font-medium mb-1">
+              <label className="block text-xs text-white font-bold mb-1">
                 KM Driven *
               </label>
               <input
@@ -572,7 +781,7 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs text-neutral-300 font-medium mb-1">Fuel Type</label>
+              <label className="block text-xs text-white font-bold mb-1">Fuel Type</label>
               <GlassSelect
                 value={fuel}
                 onChange={(v) => setFuel(v as FuelType)}
@@ -584,12 +793,14 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
                   { value: 'CNG', label: 'CNG' },
                   { value: 'Electric', label: 'Electric' },
                   { value: 'Hybrid', label: 'Hybrid' },
+                  { value: 'Petrol + CNG', label: 'Petrol + CNG' },
+                  { value: 'Petrol + LPG', label: 'Petrol + LPG' },
                 ]}
               />
             </div>
 
             <div>
-              <label className="block text-xs text-neutral-300 font-medium mb-1">
+              <label className="block text-xs text-white font-bold mb-1">
                 Transmission
               </label>
               <GlassSelect
@@ -605,8 +816,23 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs text-neutral-300 font-medium mb-1">
-                Exterior Color
+              <label className="block text-xs text-white font-bold mb-1">Insurance</label>
+              <GlassSelect
+                value={insurance}
+                onChange={setInsurance}
+                ariaLabel="Insurance status"
+                className="w-full px-3 py-2 pr-10 rounded-xl bg-black/50 border border-white/10 text-white text-sm text-left focus:outline-none focus:border-white/60 cursor-pointer"
+                options={[
+                  { value: '', label: 'Select…' },
+                  { value: 'Valid', label: 'Valid' },
+                  { value: 'Lapsed', label: 'Lapsed' },
+                ]}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-white font-bold mb-1">
+                Exterior Colour
               </label>
               <input
                 type="text"
@@ -627,7 +853,7 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
           </h3>
 
           <div>
-            <label className="block text-xs text-neutral-300 font-medium mb-1">
+            <label className="block text-xs text-white font-bold mb-1">
               Vehicle Overview &amp; Condition Dossier
             </label>
             <textarea
@@ -640,7 +866,7 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs text-neutral-300 font-medium mb-1.5">
+            <label className="block text-xs text-white font-bold mb-1.5">
               Features Checklist
             </label>
             <div className="flex gap-2 mb-3">
@@ -728,7 +954,7 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
             <div className="text-sm font-semibold text-white mb-1 flex items-center justify-center gap-2">
               <ImagePlus className="w-4 h-4 text-neutral-400" />
               {uploading
-                ? `Uploading images… ${uploadProgress ? Math.round((uploadProgress.done / uploadProgress.total) * 100) : 0}%`
+                ? `Uploading images… ${uploadProgress ? uploadProgress.percent : 0}%`
                 : 'Upload photos from your device'}
             </div>
             {uploading && uploadProgress && (
@@ -738,7 +964,7 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
                     className="h-full bg-white/80 rounded-full"
                     initial={{ width: '0%' }}
                     animate={{
-                      width: `${Math.round((uploadProgress.done / uploadProgress.total) * 100)}%`,
+                      width: `${uploadProgress.percent}%`,
                     }}
                     transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                   />
@@ -790,10 +1016,13 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
                   transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                   className="relative group rounded-xl overflow-hidden h-28 border border-white/15 bg-black"
                 >
-                  <img
+                  <Image
                     src={photo.url}
                     alt={`Preview ${idx + 1}`}
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="(max-width: 640px) 45vw, 200px"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    className="object-cover"
                   />
 
                   {/* Reorder controls */}

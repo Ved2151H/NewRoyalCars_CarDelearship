@@ -33,7 +33,6 @@ export async function getDeletedCarsAction(
           ? {
               OR: [
                 { name: { contains: q, mode: 'insensitive' } },
-                { carNumber: { contains: q, mode: 'insensitive' } },
               ],
             }
           : {}),
@@ -50,7 +49,6 @@ export async function getDeletedCarsAction(
           {
             id: c.id,
             name: c.name,
-            carNumber: c.carNumber,
             price: c.price,
             imageUrl: c.images[0]?.imageUrl ?? null,
             deletedAt: c.deletedAt.toISOString(),

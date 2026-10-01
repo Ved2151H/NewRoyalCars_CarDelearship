@@ -167,7 +167,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onBackToSite,
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <motion.div variants={itemVariants}>
-            <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-widest mb-1.5">
+            <label className="block text-[11px] font-bold text-white uppercase tracking-widest mb-1.5">
               Admin ID
             </label>
             <div className="relative group">
@@ -185,7 +185,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onBackToSite,
           </motion.div>
 
           <motion.div variants={itemVariants}>
-            <label className="block text-[11px] font-semibold text-neutral-400 uppercase tracking-widest mb-1.5">
+            <label className="block text-[11px] font-bold text-white uppercase tracking-widest mb-1.5">
               Password
             </label>
             <div className="relative group">

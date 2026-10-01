@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { AnimatePresence, motion } from 'motion/react';
 import { Car, Enquiry } from '../../types';
 import { GlassButton } from '../common/GlassButton';
@@ -109,9 +110,12 @@ const EnquiryForm: React.FC<{
               className="mb-5 p-3 rounded-xl bg-black/50 border border-white/10 flex items-center gap-3"
             >
               {car.images.length > 0 ? (
-                <img
+                <Image
                   src={car.images[0]}
                   alt={car.name}
+                  width={56}
+                  height={44}
+                  sizes="56px"
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                   className="w-14 h-11 object-cover rounded-lg border border-white/10"
                 />
@@ -121,7 +125,7 @@ const EnquiryForm: React.FC<{
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-semibold text-white truncate">{car.name}</div>
                 <div className="text-[11px] text-neutral-400 font-mono">
-                  {car.carNumber} &middot; {car.year} &middot; {car.fuel}
+                  {car.year} &middot; {car.fuel}
                 </div>
               </div>
               <div className="font-serif text-sm font-bold text-neutral-300">

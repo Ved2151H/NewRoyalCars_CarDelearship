@@ -73,7 +73,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 }) => {
   // All metrics computed from real state — zero fabricated numbers.
   const availableCount = cars.filter((c) => c.availability === 'Available').length;
-  const soldCount = cars.filter((c) => c.availability === 'Sold' || c.availability === 'Reserved').length;
+  const soldCount = cars.filter((c) => c.availability === 'Sold' || c.availability === 'Booked').length;
   const acCount = cars.filter((c) => c.ac).length;
   const nonAcCount = cars.filter((c) => !c.ac).length;
 

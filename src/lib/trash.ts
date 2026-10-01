@@ -4,7 +4,6 @@ export const TRASH_RETENTION_DAYS = 15;
 export interface DeletedCarItem {
   id: string;
   name: string;
-  carNumber: string;
   price: number;
   imageUrl: string | null;
   deletedAt: string;

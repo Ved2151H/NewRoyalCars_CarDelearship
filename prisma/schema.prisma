@@ -46,34 +46,35 @@ model Admin {
 }
 
 model Car {
-  id          String    @id @default(cuid())
-  name        String
-  brand       String
-  model       String
-  carNumber   String    @unique
-  acAvailable Boolean   @default(true)
-  price       Int
-  numberOfOwners Int    @default(1)
-  kmFrom      Int
-  kmTo        Int
-  fuelType    String
-  transmission String
-  year        Int
-  description String?   @db.Text
-  status      CarStatus @default(AVAILABLE)
-  features    String[]  @default([])
-  color       String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  /** Soft-delete timestamp — set when moved to Trash; null = active. */
-  deletedAt   DateTime?
+  id             String    @id @default(cuid())
+  name           String
+  brand          String
+  variant        String
+  acAvailable    Boolean   @default(true)
+  price          Int
+  numberOfOwners Int       @default(1)
+  kmFrom         Int
+  kmTo           Int
+  fuelType       String
+  transmission   String
+  year           Int
+  insurance      String?
+  description    String?   @db.Text
+  status         CarStatus @default(AVAILABLE)
+  features       String[]  @default([])
+  color          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  /**
+   * Soft-delete timestamp — set when moved to Trash; null = active.
+   */
+  deletedAt      DateTime?
 
   images    CarImage[]
   enquiries Enquiry[]
   bookings  Booking[]
 
   @@index([brand])
-  @@index([carNumber])
   @@index([status])
   @@index([price])
   @@index([acAvailable])
@@ -97,20 +98,22 @@ model CarImage {
 }
 
 model Enquiry {
-  id           String        @id @default(cuid())
-  carId        String?
-  customerName String
-  phone        String
-  city         String?
-  email        String?
-  acRequired   Boolean       @default(true)
-  message      String?       @db.Text
-  status       EnquiryStatus @default(NEW)
+  id            String        @id @default(cuid())
+  carId         String?
+  customerName  String
+  phone         String
+  city          String?
+  email         String?
+  acRequired    Boolean       @default(true)
+  message       String?       @db.Text
+  status        EnquiryStatus @default(NEW)
   preferredDate DateTime?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  /** Soft-delete timestamp — set when moved to Trash; null = active. */
-  deletedAt    DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  /**
+   * Soft-delete timestamp — set when moved to Trash; null = active.
+   */
+  deletedAt     DateTime?
 
   car        Car?      @relation(fields: [carId], references: [id], onDelete: SetNull)
   customerId String?
@@ -123,12 +126,12 @@ model Enquiry {
 }
 
 model Customer {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   name      String
-  phone     String    @unique
+  phone     String   @unique
   email     String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   enquiries Enquiry[]
   bookings  Booking[]
@@ -138,18 +141,18 @@ model Customer {
 }
 
 model DealerSettings {
-  id           String  @id @default(cuid())
-  dealershipName String
-  contactPhone   String
-  supportEmail   String
-  showroomAddress String
-  businessHours  String?
-  whatsappNumber String?
-  mapsUrl        String?
-  enableInstantSms  Boolean @default(true)
-  enableEmailAlerts Boolean @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String   @id @default(cuid())
+  dealershipName    String
+  contactPhone      String
+  supportEmail      String
+  showroomAddress   String
+  businessHours     String?
+  whatsappNumber    String?
+  mapsUrl           String?
+  enableInstantSms  Boolean  @default(true)
+  enableEmailAlerts Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@map("dealer_settings")
 }
@@ -165,8 +168,8 @@ model Booking {
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
 
-  car        Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
-  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  car      Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([carId])
   @@index([customerId])
