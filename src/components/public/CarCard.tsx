@@ -149,7 +149,9 @@ export const CarCard: React.FC<CarCardProps> = ({
         <div className="flex items-center gap-1.5 mt-2 text-[11px] text-neutral-400">
           <Gauge className="w-3.5 h-3.5 text-neutral-500" />
           <span>
-            {formatKm(car.kmFrom)} - {formatKm(car.kmTo)} km
+            {car.kmTo > car.kmFrom
+              ? `${formatKm(car.kmFrom)} - ${formatKm(car.kmTo)} km`
+              : `${formatKm(car.kmFrom)} km`}
           </span>
         </div>
 

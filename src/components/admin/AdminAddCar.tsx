@@ -34,7 +34,7 @@ interface PhotoItem {
 }
 
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-const MAX_FILE_MB = 10;
+const MAX_FILE_MB = 50;
 const MAX_PHOTOS = 10;
 
 export const AdminAddCar: React.FC<AdminAddCarProps> = ({
@@ -53,7 +53,6 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
   const [ac, setAc] = useState<boolean>(initialCar ? initialCar.ac : true);
   const [owners, setOwners] = useState<number>(initialCar?.owners || 1);
   const [kmFrom, setKmFrom] = useState<number | ''>(initialCar?.kmFrom || '');
-  const [kmTo, setKmTo] = useState<number | ''>(initialCar?.kmTo || '');
   const [fuel, setFuel] = useState<FuelType>(initialCar?.fuel || 'Petrol');
   const [transmission, setTransmission] = useState<TransmissionType>(
     initialCar?.transmission || 'Manual'
@@ -146,23 +145,58 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
    * 4.5 MB request-body limit is irrelevant. The presign endpoint validates
    * session + size + declared MIME; the object key comes back server-signed.
    */
+  /**
+   * fetch with one automatic retry for network-level failures (TypeError:
+   * "Failed to fetch"). These are transient — dev-server recompiles, brief
+   * connection drops — and a single retry hides almost all of them.
+   */
+  const fetchWithRetry = async (
+    input: RequestInfo | URL,
+    init?: RequestInit
+  ): Promise<Response> => {
+    try {
+      return await fetch(input, init);
+    } catch (err) {
+      if (err instanceof TypeError) {
+        // Network-level failure — wait a beat and retry once.
+        await new Promise((r) => setTimeout(r, 800));
+        return await fetch(input, init);
+      }
+      throw err;
+    }
+  };
+
   const uploadOne = async (file: File): Promise<PhotoItem> => {
     const qs = new URLSearchParams({
       name: file.name,
       contentType: file.type || 'image/jpeg',
       size: String(file.size),
     });
-    const presignRes = await fetch(`/api/images/upload?${qs.toString()}`);
+    let presignRes: Response;
+    try {
+      presignRes = await fetchWithRetry(`/api/images/upload?${qs.toString()}`);
+    } catch {
+      throw new Error(
+        'Could not reach the server to start the upload. Check your connection and try again.'
+      );
+    }
     const presign = await presignRes.json().catch(() => null);
     if (!presignRes.ok || !presign?.ok || !presign.uploadUrl) {
       throw new Error(presign?.error || 'Unable to upload the image. Please try again.');
     }
 
-    const putRes = await fetch(presign.uploadUrl as string, {
-      method: 'PUT',
-      headers: presign.headers as Record<string, string>,
-      body: file,
-    });
+    let putRes: Response;
+    try {
+      putRes = await fetchWithRetry(presign.uploadUrl as string, {
+        method: 'PUT',
+        headers: presign.headers as Record<string, string>,
+        body: file,
+      });
+    } catch {
+      throw new Error(
+        'Upload to image storage failed — check your internet connection and try again.'
+      );
+    }
     if (!putRes.ok) {
       throw new Error('Unable to upload the image. Please try again.');
     }
@@ -243,7 +277,7 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
 
     const numericPrice = Number(price) || 0;
     const numericKmFrom = Number(kmFrom) || 0;
-    const numericKmTo = Number(kmTo) || Math.max(numericKmFrom, 0);
+    const numericKmTo = numericKmFrom;
     const numericYear = Number(year) || new Date().getFullYear();
 
     const formattedPrice = `₹${numericPrice.toLocaleString('en-IN')}`;
@@ -524,7 +558,7 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
 
             <div>
               <label className="block text-xs text-neutral-300 font-medium mb-1">
-                KM Driven (From) *
+                KM Driven *
               </label>
               <input
                 type="number"
@@ -533,21 +567,6 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
                 value={kmFrom}
                 onChange={(e) => setKmFrom(e.target.value === '' ? '' : Number(e.target.value))}
                 placeholder="e.g. 45000"
-                className="w-full px-3 py-2 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:outline-none focus:border-white/60 font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-neutral-300 font-medium mb-1">
-                KM Driven (To) *
-              </label>
-              <input
-                type="number"
-                required
-                min={0}
-                value={kmTo}
-                onChange={(e) => setKmTo(e.target.value === '' ? '' : Number(e.target.value))}
-                placeholder="e.g. 46000"
                 className="w-full px-3 py-2 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:outline-none focus:border-white/60 font-mono"
               />
             </div>

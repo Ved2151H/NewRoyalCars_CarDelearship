@@ -54,7 +54,10 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
     {
       icon: <Gauge className="w-4 h-4" />,
       label: 'KM Driven',
-      value: `${formatKm(car.kmFrom)} - ${formatKm(car.kmTo)} km`,
+      value:
+        car.kmTo > car.kmFrom
+          ? `${formatKm(car.kmFrom)} - ${formatKm(car.kmTo)} km`
+          : `${formatKm(car.kmFrom)} km`,
     },
     { icon: <Fuel className="w-4 h-4" />, label: 'Fuel Type', value: car.fuel },
     { icon: <Cog className="w-4 h-4" />, label: 'Transmission', value: car.transmission },

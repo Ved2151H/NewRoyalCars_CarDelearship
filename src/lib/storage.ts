@@ -51,7 +51,7 @@ export interface PresignedUpload {
   publicUrl: string;
 }
 
-export const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB per image
+export const MAX_IMAGE_BYTES = 50 * 1024 * 1024; // 50 MB per image
 export const MAX_IMAGES_PER_CAR = 10;
 
 /** Bytes accepted by the image endpoints (validated again by magic bytes). */
@@ -143,7 +143,7 @@ export async function createPresignedUpload(
   const cfg = neonConfig();
   if (!cfg) throw new Error('Neon Object Storage is not configured');
   if (contentLength > MAX_IMAGE_BYTES) {
-    throw new Error('Image must be smaller than 10 MB.');
+    throw new Error('Image must be smaller than 50 MB.');
   }
 
   const ext = EXT_BY_MIME[contentType] ?? '.jpg';

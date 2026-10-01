@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
       !ALLOWED_MIME_TYPES.includes(contentType as (typeof ALLOWED_MIME_TYPES)[number])
     ) {
       return NextResponse.json(
-        { error: contentLength > MAX_IMAGE_BYTES ? 'Image must be smaller than 10 MB.' : 'Only JPG, PNG and WebP images are supported.' },
+        { error: contentLength > MAX_IMAGE_BYTES ? 'Image must be smaller than 50 MB.' : 'Only JPG, PNG and WebP images are supported.' },
         { status: contentLength > MAX_IMAGE_BYTES ? 413 : 415 }
       );
     }
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     // 1. Size first (cheap).
     if (file.size > MAX_IMAGE_BYTES) {
       return NextResponse.json(
-        { error: 'Image must be smaller than 10 MB.' },
+        { error: 'Image must be smaller than 50 MB.' },
         { status: 413 }
       );
     }

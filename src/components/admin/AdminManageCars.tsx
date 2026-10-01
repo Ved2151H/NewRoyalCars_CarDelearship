@@ -210,7 +210,9 @@ export const AdminManageCars: React.FC<AdminManageCarsProps> = ({
 
                     {/* KM */}
                     <td className="py-3 px-4 font-mono text-neutral-300">
-                      {formatKm(car.kmFrom)} - {formatKm(car.kmTo)} km
+                      {car.kmTo > car.kmFrom
+                        ? `${formatKm(car.kmFrom)} - ${formatKm(car.kmTo)} km`
+                        : `${formatKm(car.kmFrom)} km`}
                     </td>
 
                     {/* Price */}
