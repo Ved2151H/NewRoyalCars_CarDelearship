@@ -459,6 +459,170 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
 
       {/* Main Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Photo Upload Area */}
+        <div className="p-6 rounded-2xl bg-neutral-900/40 backdrop-blur-xl border border-white/10 shadow-xl space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs uppercase font-bold tracking-widest text-neutral-400 font-serif">
+              Vehicle Photography
+            </h3>
+            <span className="text-xs text-neutral-400">
+              {photos.length} / {MAX_PHOTOS} Photos
+            </span>
+          </div>
+
+          {/* Upload Dropzone — real file uploads + optional URL paste */}
+          <div
+            className="p-6 rounded-2xl border-2 border-dashed border-white/20 bg-black/40 hover:bg-white/[0.04] transition-colors duration-300 text-center cursor-pointer"
+            onClick={() => fileInputRef.current?.click()}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              handleFilesSelected(e.dataTransfer.files);
+            }}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              className="hidden"
+              onChange={(e) => handleFilesSelected(e.target.files)}
+            />
+            <div className="w-12 h-12 rounded-full bg-white/[0.05] flex items-center justify-center mx-auto mb-3 text-neutral-400">
+              {uploading ? (
+                <Loader2 className="w-6 h-6 animate-spin" />
+              ) : (
+                <UploadCloud className="w-6 h-6" />
+              )}
+            </div>
+            <div className="text-sm font-semibold text-white mb-1 flex items-center justify-center gap-2">
+              <ImagePlus className="w-4 h-4 text-neutral-400" />
+              {uploading
+                ? `Uploading images… ${uploadProgress ? uploadProgress.percent : 0}%`
+                : 'Upload photos from your device'}
+            </div>
+            {uploading && uploadProgress && (
+              <div className="max-w-xs mx-auto mb-3">
+                <div className="h-1 rounded-full bg-white/10 overflow-hidden">
+                  <motion.div
+                    className="h-full bg-white/80 rounded-full"
+                    initial={{ width: '0%' }}
+                    animate={{
+                      width: `${uploadProgress.percent}%`,
+                    }}
+                    transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                  />
+                </div>
+                <p className="text-[11px] text-neutral-400 mt-1.5 font-mono">
+                  {uploadProgress.done} / {uploadProgress.total} photo
+                  {uploadProgress.total === 1 ? '' : 's'} uploaded
+                </p>
+              </div>
+            )}
+            <p className="text-xs text-neutral-400 mb-3">
+              Click to browse or drag &amp; drop — JPEG, PNG, WebP up to {MAX_FILE_MB} MB each.
+              Up to {MAX_PHOTOS} photos, first one becomes the dealership cover.
+            </p>
+
+            {/* Optional URL Input */}
+            <div className="max-w-md mx-auto flex gap-2" onClick={(e) => e.stopPropagation()}>
+              <input
+                type="url"
+                placeholder="Or paste an image URL (CDN, dealership hosting)..."
+                value={imageUrlInput}
+                onChange={(e) => setImageUrlInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddImage(imageUrlInput);
+                  }
+                }}
+                className="flex-1 px-3 py-1.5 rounded-lg bg-black/60 border border-white/15 text-white text-xs focus:outline-none focus:border-white/60"
+              />
+              <button
+                type="button"
+                onClick={() => handleAddImage(imageUrlInput)}
+                className="px-3 py-1.5 rounded-lg bg-white text-black font-semibold text-xs hover:bg-neutral-200 transition-colors"
+              >
+                Add URL
+              </button>
+            </div>
+          </div>
+
+          {/* Active Image Previews with Remove */}
+          {photos.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+              {photos.map((photo, idx) => (
+                <motion.div
+                  key={`${photo.url.slice(0, 60)}-${idx}`}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                  className="relative group rounded-xl overflow-hidden h-28 border border-white/15 bg-black"
+                >
+                  <Image
+                    src={photo.url}
+                    alt={`Preview ${idx + 1}`}
+                    fill
+                    sizes="(max-width: 640px) 45vw, 200px"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    className="object-cover"
+                  />
+
+                  {/* Reorder controls */}
+                  <div className="absolute top-1.5 left-1.5 flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleMoveImage(idx, -1)}
+                      disabled={idx === 0}
+                      className="p-1 rounded-md bg-black/70 text-neutral-300 hover:text-white disabled:opacity-30 transition-colors"
+                      title="Move earlier"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleMoveImage(idx, 1)}
+                      disabled={idx === photos.length - 1}
+                      className="p-1 rounded-md bg-black/70 text-neutral-300 hover:text-white disabled:opacity-30 transition-colors"
+                      title="Move later"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Remove */}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveImage(idx)}
+                    className="absolute top-1.5 right-1.5 p-1 rounded-md bg-black/70 text-neutral-300 hover:text-red-400 transition-colors"
+                    title="Remove image"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+
+                  {/* Set as primary */}
+                  {idx !== 0 && (
+                    <button
+                      type="button"
+                      onClick={() => handleSetPrimary(idx)}
+                      className="absolute bottom-1.5 right-1.5 p-1 rounded-md bg-black/70 text-neutral-400 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+                      title="Set as primary cover"
+                    >
+                      <Star className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+
+                  {idx === 0 && (
+                    <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-white text-black">
+                      Primary Cover
+                    </span>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
         {/* ================= MOBILE FLOW (< md) =================
             One clean box with fields in the exact required order:
             Name → Variant → Year → Owners → Transmission → KM → Insurance →
@@ -915,170 +1079,6 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
           </div>
         </div>
 
-        {/* Photo Upload Area */}
-        <div className="p-6 rounded-2xl bg-neutral-900/40 backdrop-blur-xl border border-white/10 shadow-xl space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs uppercase font-bold tracking-widest text-neutral-400 font-serif">
-              Vehicle Photography
-            </h3>
-            <span className="text-xs text-neutral-400">
-              {photos.length} / {MAX_PHOTOS} Photos
-            </span>
-          </div>
-
-          {/* Upload Dropzone — real file uploads + optional URL paste */}
-          <div
-            className="p-6 rounded-2xl border-2 border-dashed border-white/20 bg-black/40 hover:bg-white/[0.04] transition-colors duration-300 text-center cursor-pointer"
-            onClick={() => fileInputRef.current?.click()}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault();
-              handleFilesSelected(e.dataTransfer.files);
-            }}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              multiple
-              className="hidden"
-              onChange={(e) => handleFilesSelected(e.target.files)}
-            />
-            <div className="w-12 h-12 rounded-full bg-white/[0.05] flex items-center justify-center mx-auto mb-3 text-neutral-400">
-              {uploading ? (
-                <Loader2 className="w-6 h-6 animate-spin" />
-              ) : (
-                <UploadCloud className="w-6 h-6" />
-              )}
-            </div>
-            <div className="text-sm font-semibold text-white mb-1 flex items-center justify-center gap-2">
-              <ImagePlus className="w-4 h-4 text-neutral-400" />
-              {uploading
-                ? `Uploading images… ${uploadProgress ? uploadProgress.percent : 0}%`
-                : 'Upload photos from your device'}
-            </div>
-            {uploading && uploadProgress && (
-              <div className="max-w-xs mx-auto mb-3">
-                <div className="h-1 rounded-full bg-white/10 overflow-hidden">
-                  <motion.div
-                    className="h-full bg-white/80 rounded-full"
-                    initial={{ width: '0%' }}
-                    animate={{
-                      width: `${uploadProgress.percent}%`,
-                    }}
-                    transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                  />
-                </div>
-                <p className="text-[11px] text-neutral-400 mt-1.5 font-mono">
-                  {uploadProgress.done} / {uploadProgress.total} photo
-                  {uploadProgress.total === 1 ? '' : 's'} uploaded
-                </p>
-              </div>
-            )}
-            <p className="text-xs text-neutral-400 mb-3">
-              Click to browse or drag &amp; drop — JPEG, PNG, WebP up to {MAX_FILE_MB} MB each.
-              Up to {MAX_PHOTOS} photos, first one becomes the dealership cover.
-            </p>
-
-            {/* Optional URL Input */}
-            <div className="max-w-md mx-auto flex gap-2" onClick={(e) => e.stopPropagation()}>
-              <input
-                type="url"
-                placeholder="Or paste an image URL (CDN, dealership hosting)..."
-                value={imageUrlInput}
-                onChange={(e) => setImageUrlInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddImage(imageUrlInput);
-                  }
-                }}
-                className="flex-1 px-3 py-1.5 rounded-lg bg-black/60 border border-white/15 text-white text-xs focus:outline-none focus:border-white/60"
-              />
-              <button
-                type="button"
-                onClick={() => handleAddImage(imageUrlInput)}
-                className="px-3 py-1.5 rounded-lg bg-white text-black font-semibold text-xs hover:bg-neutral-200 transition-colors"
-              >
-                Add URL
-              </button>
-            </div>
-          </div>
-
-          {/* Active Image Previews with Remove */}
-          {photos.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-              {photos.map((photo, idx) => (
-                <motion.div
-                  key={`${photo.url.slice(0, 60)}-${idx}`}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                  className="relative group rounded-xl overflow-hidden h-28 border border-white/15 bg-black"
-                >
-                  <Image
-                    src={photo.url}
-                    alt={`Preview ${idx + 1}`}
-                    fill
-                    sizes="(max-width: 640px) 45vw, 200px"
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                    className="object-cover"
-                  />
-
-                  {/* Reorder controls */}
-                  <div className="absolute top-1.5 left-1.5 flex gap-1">
-                    <button
-                      type="button"
-                      onClick={() => handleMoveImage(idx, -1)}
-                      disabled={idx === 0}
-                      className="p-1 rounded-md bg-black/70 text-neutral-300 hover:text-white disabled:opacity-30 transition-colors"
-                      title="Move earlier"
-                    >
-                      <ChevronLeft className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleMoveImage(idx, 1)}
-                      disabled={idx === photos.length - 1}
-                      className="p-1 rounded-md bg-black/70 text-neutral-300 hover:text-white disabled:opacity-30 transition-colors"
-                      title="Move later"
-                    >
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  {/* Remove */}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveImage(idx)}
-                    className="absolute top-1.5 right-1.5 p-1 rounded-md bg-black/70 text-neutral-300 hover:text-red-400 transition-colors"
-                    title="Remove image"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-
-                  {/* Set as primary */}
-                  {idx !== 0 && (
-                    <button
-                      type="button"
-                      onClick={() => handleSetPrimary(idx)}
-                      className="absolute bottom-1.5 right-1.5 p-1 rounded-md bg-black/70 text-neutral-400 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
-                      title="Set as primary cover"
-                    >
-                      <Star className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-
-                  {idx === 0 && (
-                    <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-white text-black">
-                      Primary Cover
-                    </span>
-                  )}
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </div>
 
         {/* Footer Actions */}
         <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/10 flex items-center justify-end gap-3">
