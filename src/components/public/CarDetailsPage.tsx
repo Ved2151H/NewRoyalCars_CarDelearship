@@ -53,13 +53,40 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [tab, setTab] = useState<DetailTab>('overview');
 
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isRightSwipe) {
+      selectImage(activeImageIndex === car.images.length - 1 ? 0 : activeImageIndex + 1);
+    }
+    if (isLeftSwipe) {
+      selectImage(activeImageIndex === 0 ? car.images.length - 1 : activeImageIndex - 1);
+    }
+  };
+
   /* ------------------ Automatic photo rotation (slideshow) ------------------
    * Cycles 1 → 2 → … → N → 1 every 5 seconds with a crossfade. Pauses while the
    * pointer is over the viewer and for a few seconds after any manual
    * interaction (arrows/thumbnails/zoom/pan). Once the user takes over via a
    * control, the slideshow stays off until they re-enable the toggle.
    */
-  const ROTATE_MS = 5000;
+  const ROTATE_MS = 1000;
   const RESUME_MS = 4000;
   const [slideshowOn, setSlideshowOn] = useState(true);
   const hoverPauseRef = useRef(false); // pointer resting on the viewer
@@ -166,6 +193,9 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
                 onMouseLeave={() => {
                   hoverPauseRef.current = false;
                 }}
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEnd}
               >
                 <ZoomableCarImage
                   src={car.images[activeImageIndex] || car.images[0]}
@@ -181,8 +211,7 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
               <div className="relative h-72 sm:h-96 lg:h-[420px] rounded-2xl overflow-hidden glass-card" />
             )}
 
-            {/* Grade */}
-            <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-t from-black/50 via-transparent to-black/20" />
+            
 
             {/* Favorite */}
             <button
@@ -209,27 +238,7 @@ export const CarDetailsPage: React.FC<CarDetailsPageProps> = ({
               </button>
             )}
 
-            {/* Prev / Next */}
-            {car.images.length > 1 && (
-              <>
-                <button
-                  onClick={() => selectImage(activeImageIndex === 0 ? car.images.length - 1 : activeImageIndex - 1)}
-                  aria-label="Previous image"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-black/55 hover:bg-black/80 text-white backdrop-blur-md border border-white/15 transition-all duration-300 opacity-75 group-hover:opacity-100 cursor-pointer"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() =>
-                    selectImage(activeImageIndex === car.images.length - 1 ? 0 : activeImageIndex + 1)
-                  }
-                  aria-label="Next image"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-black/55 hover:bg-black/80 text-white backdrop-blur-md border border-white/15 transition-all duration-300 opacity-75 group-hover:opacity-100 cursor-pointer"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </>
-            )}
+            
 
             {/* Counter — bottom-left; the zoom controls occupy bottom-right */}
             {car.images.length > 0 && (
