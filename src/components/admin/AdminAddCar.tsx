@@ -625,11 +625,12 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
         </div>
         {/* ================= MOBILE FLOW (< md) =================
             One clean box with fields in the exact required order:
-            Name → Variant → Year → Owners → Transmission → KM → Insurance →
-            Price → AC. Description & Photos follow in the shared sections
-            below. Fields outside the list (Brand, Fuel Type, Exterior
-            Colour, Availability) are hidden on mobile only — desktop keeps
-            every original field and section. */}
+            Name → Variant → Year → Owners → Transmission → KM → Fuel Type →
+            Insurance → Price → AC. Description & Photos follow in the shared
+            sections below. Brand, Exterior Colour and Availability remain
+            desktop-only inputs — desktop keeps every original field and
+            section. Every field rendered in both branches shares one piece of
+            state, so the two layouts can never diverge. */}
         <div className="md:hidden p-6 rounded-2xl bg-neutral-900/40 backdrop-blur-xl border border-white/10 shadow-xl space-y-4">
           <div>
             <label className="block text-xs text-white font-bold mb-1">
@@ -719,6 +720,27 @@ export const AdminAddCar: React.FC<AdminAddCarProps> = ({
               onChange={(e) => setKmFrom(e.target.value === '' ? '' : Number(e.target.value))}
               placeholder="e.g. 45000"
               className="w-full px-3 py-2 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:outline-none focus:border-white/60 font-mono"
+            />
+          </div>
+
+          {/* Same Fuel Type field as the desktop grid — one `fuel` state, so a
+              choice made here is what gets stored. */}
+          <div>
+            <label className="block text-xs text-white font-bold mb-1">Fuel Type</label>
+            <GlassSelect
+              value={fuel}
+              onChange={(v) => setFuel(v as FuelType)}
+              ariaLabel="Fuel type"
+              className="w-full px-3 py-2 pr-10 rounded-xl bg-black/50 border border-white/10 text-white text-sm text-left focus:outline-none focus:border-white/60 cursor-pointer"
+              options={[
+                { value: 'Petrol', label: 'Petrol' },
+                { value: 'Diesel', label: 'Diesel' },
+                { value: 'CNG', label: 'CNG' },
+                { value: 'Electric', label: 'Electric' },
+                { value: 'Hybrid', label: 'Hybrid' },
+                { value: 'Petrol + CNG', label: 'Petrol + CNG' },
+                { value: 'Petrol + LPG', label: 'Petrol + LPG' },
+              ]}
             />
           </div>
 

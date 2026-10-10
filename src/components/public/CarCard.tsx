@@ -154,15 +154,15 @@ export const CarCard: React.FC<CarCardProps> = ({
           </span>
         </div>
 
-        {/* Price */}
-        <div className="mt-3 font-serif text-xl sm:text-2xl font-semibold text-white tracking-wide">
-          {car.formattedPrice}
-        </div>
-
-        {/* Fuel type — directly below the price on every breakpoint. */}
-        <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-neutral-400 min-w-0">
+        {/* Fuel type — directly above the price on every breakpoint. */}
+        <div className="flex items-center gap-1.5 mt-3 text-[11px] text-neutral-400 min-w-0">
           <Fuel className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
           <span className="truncate">Fuel: {car.fuel}</span>
+        </div>
+
+        {/* Price */}
+        <div className="mt-1.5 font-serif text-xl sm:text-2xl font-semibold text-white tracking-wide">
+          {car.formattedPrice}
         </div>
 
         {/* View Details */}
