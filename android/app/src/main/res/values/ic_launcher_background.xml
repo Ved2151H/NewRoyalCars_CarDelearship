@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The uploaded New Royal Cars mark is a white line-art car on black.
+         Using the brand obsidian as the adaptive-icon background layer keeps it
+         clearly legible on both light and dark launcher backgrounds. -->
+    <color name="ic_launcher_background">#FF050607</color>
+</resources>

@@ -3,7 +3,7 @@ import Image from 'next/image';
 import { motion, useMotionValue, useSpring, useTransform } from 'motion/react';
 import { Car } from '../../types';
 import { formatKm } from '../../lib/utils';
-import { ArrowRight, Heart, Snowflake, Gauge, Fuel } from 'lucide-react';
+import { ArrowRight, Heart, Gauge, Calendar, Fuel } from 'lucide-react';
 
 interface CarCardProps {
   car: Car;
@@ -135,15 +135,6 @@ export const CarCard: React.FC<CarCardProps> = ({
           {car.name}
         </h3>
 
-        {/* Spec chips row — owners deliberately omitted here; they live in the
-            car details view only. */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 text-[11px] text-neutral-400">
-          <span className="flex items-center gap-1.5">
-            <Snowflake className="w-3.5 h-3.5 text-neutral-500" />
-            {car.ac ? 'AC' : 'Non-AC'}
-          </span>
-        </div>
-
         {/* KM row */}
         <div className="flex items-center gap-1.5 mt-2 text-[11px] text-neutral-400">
           <Gauge className="w-3.5 h-3.5 text-neutral-500" />
@@ -152,6 +143,12 @@ export const CarCard: React.FC<CarCardProps> = ({
               ? `${formatKm(car.kmFrom)} - ${formatKm(car.kmTo)} km`
               : `${formatKm(car.kmFrom)} km`}
           </span>
+        </div>
+
+        {/* Manufacturing year — from the car's existing `year` field. */}
+        <div className="flex items-center gap-1.5 mt-3 text-[11px] text-neutral-400 min-w-0">
+          <Calendar className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+          <span className="truncate">Manufacturing Year: {car.year}</span>
         </div>
 
         {/* Fuel type — directly above the price on every breakpoint. */}

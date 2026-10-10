@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">New Royal Cars</string>
+    <string name="title_activity_main">New Royal Cars</string>
+    <string name="package_name">com.newroyalcars.app</string>
+    <string name="custom_url_scheme">com.newroyalcars.app</string>
+    <!-- Must match NotificationHelper.CHANNEL_ID. -->
+    <string name="nrc_default_notification_channel_id">nrc_enquiries</string>
+</resources>

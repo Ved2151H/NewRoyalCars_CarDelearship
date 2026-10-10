@@ -7,6 +7,7 @@ import { requireAdmin } from '@/lib/auth';
 import { enquiryInputSchema, enquiryStatusUpdateSchema, enquiryDeleteSchema } from '@/lib/validation';
 import { rateLimit } from '@/lib/rate-limit';
 import { firstZodError, type ActionResult } from '@/lib/utils';
+import { notifyAdminsOfNewEnquiry } from '@/lib/push';
 import type { Enquiry } from '@/types';
 
 /* ==================================================================
@@ -39,10 +40,15 @@ export async function submitEnquiryAction(
 
     // If car-scoped, validate the car exists AND is not trashed.
     let carId: string | null = null;
+    let carName: string | null = null;
     if (data.carId && data.carId !== 'general') {
-      const car = await prisma.car.findFirst({ where: { id: data.carId, deletedAt: null }, select: { id: true } });
+      const car = await prisma.car.findFirst({
+        where: { id: data.carId, deletedAt: null },
+        select: { id: true, name: true },
+      });
       if (!car) return { ok: false, error: 'This vehicle is no longer listed. Please browse the dealership again.' };
       carId = car.id;
+      carName = car.name;
     }
 
     const result = await prisma.$transaction(async (tx) => {
@@ -72,6 +78,16 @@ export async function submitEnquiryAction(
     });
 
     revalidatePath('/admin');
+
+    // The enquiry is now committed. Notify authorised admin devices — a push
+    // failure is swallowed by notifyAdminsOfNewEnquiry and can never affect the
+    // enquiry that was just stored.
+    await notifyAdminsOfNewEnquiry({
+      enquiryId: result.id,
+      customerName: data.customerName,
+      phone: data.phone,
+      carName,
+    });
 
     const referenceId = `NRC-${result.id.slice(-6).toUpperCase()}`;
     return { ok: true, data: { referenceId } };

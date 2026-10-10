@@ -176,3 +176,25 @@ model Booking {
   @@index([status])
   @@map("bookings")
 }
+
+/**
+ * FCM device tokens for authorized New Royal Cars admin devices.
+ *
+ * Push-notification support only — deliberately ADDITIVE: a brand-new table
+ * that alters no existing table, column or relation. A row can only ever be
+ * created by an authenticated admin session (see /api/push/register), so
+ * ordinary website visitors are never notified. Used solely to deliver a
+ * notification after an enquiry has already been stored successfully.
+ */
+model PushToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  platform  String   @default("android")
+  adminId   String?
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([adminId])
+  @@map("push_tokens")
+}

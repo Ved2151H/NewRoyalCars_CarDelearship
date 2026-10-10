@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- New Royal Cars brand palette: obsidian black + gold accent, matching
+         the existing website theme (#050607 / #c9a227). -->
+    <color name="nrc_background">#FF050607</color>
+    <color name="nrc_gold">#FFC9A227</color>
+</resources>
