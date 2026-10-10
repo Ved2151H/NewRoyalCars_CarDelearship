@@ -3,7 +3,7 @@ import Image from 'next/image';
 import { motion, useMotionValue, useSpring, useTransform } from 'motion/react';
 import { Car } from '../../types';
 import { formatKm } from '../../lib/utils';
-import { ArrowRight, Heart, Users, Snowflake, Gauge } from 'lucide-react';
+import { ArrowRight, Heart, Snowflake, Gauge, Fuel } from 'lucide-react';
 
 interface CarCardProps {
   car: Car;
@@ -135,15 +135,12 @@ export const CarCard: React.FC<CarCardProps> = ({
           {car.name}
         </h3>
 
-        {/* Spec chips row */}
-        <div className="flex items-center gap-4 mt-3 text-[11px] text-neutral-400">
+        {/* Spec chips row — owners deliberately omitted here; they live in the
+            car details view only. */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 text-[11px] text-neutral-400">
           <span className="flex items-center gap-1.5">
             <Snowflake className="w-3.5 h-3.5 text-neutral-500" />
             {car.ac ? 'AC' : 'Non-AC'}
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Users className="w-3.5 h-3.5 text-neutral-500" />
-            {car.owners} {car.owners === 1 ? 'Owner' : 'Owners'}
           </span>
         </div>
 
@@ -160,6 +157,12 @@ export const CarCard: React.FC<CarCardProps> = ({
         {/* Price */}
         <div className="mt-3 font-serif text-xl sm:text-2xl font-semibold text-white tracking-wide">
           {car.formattedPrice}
+        </div>
+
+        {/* Fuel type — directly below the price on every breakpoint. */}
+        <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-neutral-400 min-w-0">
+          <Fuel className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+          <span className="truncate">Fuel: {car.fuel}</span>
         </div>
 
         {/* View Details */}
