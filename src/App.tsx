@@ -2,8 +2,9 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Car, FilterState, Enquiry, CarAvailability } from './types';
+import { parseAppPath, pathForRoute, pathForAdminTab, pathForCar, adminReturnPath } from './lib/routes';
 import { BackgroundCanvas } from './components/common/BackgroundCanvas';
 import { LoadingScreen } from './components/common/LoadingScreen';
 import { AdminLogin } from './components/admin/AdminLogin';
@@ -47,12 +48,16 @@ export default function App({
   dealershipPhone: string;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
 
-  // Routing — /admin deep-links survive page reloads (synced after mount to
-  // keep SSR/client markup identical; masked by the loading screen).
-  const [route, setRoute] = useState<PublicRoute>('home');
+  // Routing lives in the URL: /, /cars, /cars/:id, /about, /contact and
+  // /admin/<tab>. The initial values are read from the path Next.js is
+  // rendering, so the server and client markup agree and a hard refresh (or a
+  // bookmarked deep link) opens exactly the screen the URL points at.
+  const [initialView] = useState(() => parseAppPath(pathname));
+  const [route, setRoute] = useState<PublicRoute>(initialView.route);
   const isAdminMode = route === 'admin';
-  const [detailCarId, setDetailCarId] = useState<string | null>(null);
+  const [detailCarId, setDetailCarId] = useState<string | null>(initialView.carId);
 
   // Admin authentication — restored from the verified server session so a
   // page reload never logs the admin out unexpectedly.
@@ -62,7 +67,7 @@ export default function App({
   /** Display name shown in the navbar — falls back to the email prefix. */
   const [adminName, setAdminName] = useState('');
 
-  const [adminTab, setAdminTab] = useState<AdminTab>('dashboard');
+  const [adminTab, setAdminTab] = useState<AdminTab>(initialView.adminTab);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Core data — hydrated from PostgreSQL via the server component, then kept
@@ -97,18 +102,56 @@ export default function App({
     window.scrollTo({ top: 0 });
   }, [route, detailCarId]);
 
+  /**
+   * Client-side navigation: pushes the target path onto the history stack and
+   * applies it to the view immediately. Next.js keeps its own router state in
+   * sync with the History API, so the URL, Back/Forward and `router.refresh()`
+   * all stay consistent — without a server round-trip, which keeps the shell
+   * mounted (animations, filters and the live admin session survive).
+   */
+  const navigate = useCallback((path: string, options?: { replace?: boolean }) => {
+    if (typeof window === 'undefined') return;
+    const next = parseAppPath(path);
+    setRoute(next.route);
+    setDetailCarId(next.carId);
+    setAdminTab(next.adminTab);
+
+    if (options?.replace) {
+      window.history.replaceState(null, '', path);
+    } else if (window.location.pathname + window.location.search !== path) {
+      window.history.pushState(null, '', path);
+    }
+  }, []);
+
+  // Keep the view in step with the URL — covers Back/Forward and any history
+  // change made outside this component.
+  useEffect(() => {
+    const syncFromUrl = () => {
+      const next = parseAppPath(window.location.pathname);
+      setRoute(next.route);
+      setDetailCarId(next.carId);
+      setAdminTab(next.adminTab);
+    };
+    syncFromUrl();
+    window.addEventListener('popstate', syncFromUrl);
+    return () => window.removeEventListener('popstate', syncFromUrl);
+  }, []);
+
   // Restore admin session once on mount from the httpOnly cookie session.
+  // The route itself now comes from the URL, never from this check.
   useEffect(() => {
     let active = true;
-    if (window.location.pathname.startsWith('/admin')) {
-      setRoute('admin');
-    }
     checkSessionAction().then((res) => {
       if (!active) return;
       if (res.ok && res.data?.authenticated) {
         setIsAdminAuthenticated(true);
         if (res.data.email) setAdminEmail(res.data.email);
         if (res.data.name) setAdminName(res.data.name);
+        // Already signed in — never linger on the login URL. Safe here because
+        // the sign-in card is only mounted once `sessionChecked` is true.
+        if (window.location.pathname === '/admin/login') {
+          navigate(adminReturnPath(window.location.search), { replace: true });
+        }
       }
       setSessionChecked(true);
     });
@@ -321,11 +364,9 @@ export default function App({
     setIsEnquiryModalOpen(true);
   }, []);
 
-  // Any plain navigation leaves the details view — one route child at a time.
-  const handleNavigate = useCallback((r: PublicRoute) => {
-    setDetailCarId(null);
-    setRoute(r);
-  }, []);
+  // Any plain navigation leaves the details view — one route child at a time
+  // (none of these paths carries a car id).
+  const handleNavigate = useCallback((r: PublicRoute) => navigate(pathForRoute(r)), [navigate]);
 
   const pendingEnquiriesCount = enquiries.filter((e) => e.status === 'Pending').length;
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -338,10 +379,11 @@ export default function App({
     await logoutAction();
     setIsAdminAuthenticated(false);
     setSessionChecked(true);
-    setAdminTab('dashboard');
     setEnquiries([]);
+    // Back to the suite root so the URL matches the screen being shown.
+    navigate('/admin', { replace: true });
     router.refresh();
-  }, [router]);
+  }, [navigate, router]);
 
   return (
     <div className="relative min-h-screen bg-[#050607] text-neutral-100 font-sans antialiased overflow-x-hidden">
@@ -363,23 +405,32 @@ export default function App({
       {isAdminMode ? (
         /* ================= ADMIN ================= */
         !isAdminAuthenticated ? (
-          <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0, y: 24, filter: 'blur(10px)' }}
-              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-              transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-              className="w-full max-w-md"
-            >
-              <AdminLogin
-                adminEmail={adminEmail}
-                onSuccess={() => {
-                  setIsAdminAuthenticated(true);
-                  router.refresh();
-                }}
-                onBackToSite={() => handleNavigate('home')}
-              />
-            </motion.div>
-          </div>
+          /* The httpOnly session is restored before the sign-in card mounts:
+             during a refresh inside /admin the card is never rendered at all,
+             so a session that arrives a moment later can never swap it out. */
+          !sessionChecked ? (
+            <div className="relative z-10 min-h-screen" aria-hidden="true" />
+          ) : (
+            <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, y: 24, filter: 'blur(10px)' }}
+                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+                className="w-full max-w-md"
+              >
+                <AdminLogin
+                  adminEmail={adminEmail}
+                  onSuccess={() => {
+                    setIsAdminAuthenticated(true);
+                    // Return to the admin route we were bounced from, if any.
+                    navigate(adminReturnPath(window.location.search), { replace: true });
+                    router.refresh();
+                  }}
+                  onBackToSite={() => handleNavigate('home')}
+                />
+              </motion.div>
+            </div>
+          )
         ) : (
           <AnimatePresence mode="wait">
             <motion.div
@@ -393,8 +444,8 @@ export default function App({
               <AdminSidebar
                 currentTab={adminTab}
                 onTabChange={(tab) => {
-                  setAdminTab(tab);
                   if (tab !== 'add-car') setEditingCar(null);
+                  navigate(pathForAdminTab(tab));
                 }}
                 onLogout={handleLogout}
                 isCollapsed={isSidebarCollapsed}
@@ -417,11 +468,11 @@ export default function App({
                   onLogout={handleLogout}
                   onMenuClick={() => setIsMobileNavOpen(true)}
                   pendingEnquiries={pendingEnquiries}
-                  onViewEnquiries={() => setAdminTab('enquiries')}
-                  onOpenAccount={() => setAdminTab('account')}
+                  onViewEnquiries={() => navigate(pathForAdminTab('enquiries'))}
+                  onOpenAccount={() => navigate(pathForAdminTab('account'))}
                   onSearchCars={() => {
                     setEditingCar(null);
-                    setAdminTab('cars');
+                    navigate(pathForAdminTab('cars'));
                     // Focus the Manage Cars search box once the tab renders.
                     setTimeout(() => {
                       const searchInput = document.querySelector<HTMLInputElement>(
@@ -438,7 +489,7 @@ export default function App({
                     <AdminDashboard
                       cars={cars}
                       enquiries={enquiries}
-                      onNavigateTab={setAdminTab}
+                      onNavigateTab={(tab) => navigate(pathForAdminTab(tab))}
                       onViewCar={(car) => setDetailCarId(car.id)}
                     />
                   )}
@@ -448,11 +499,11 @@ export default function App({
                       cars={cars}
                       onAddNewCar={() => {
                         setEditingCar(null);
-                        setAdminTab('add-car');
+                        navigate(pathForAdminTab('add-car'));
                       }}
                       onEditCar={(car) => {
                         setEditingCar(car);
-                        setAdminTab('add-car');
+                        navigate(pathForAdminTab('add-car'));
                       }}
                       onViewCar={(car) => setDetailCarId(car.id)}
                       onDeleteCar={handleDeleteCar}
@@ -466,7 +517,7 @@ export default function App({
                       onSaveCar={handleSaveCar}
                       onCancel={() => {
                         setEditingCar(null);
-                        setAdminTab('cars');
+                        navigate(pathForAdminTab('cars'));
                       }}
                     />
                   )}
@@ -527,10 +578,7 @@ export default function App({
                     cars={cars}
                     favorites={favorites}
                     onToggleFavorite={handleToggleFavorite}
-                    onViewDetails={(car) => {
-                      setDetailCarId(car.id);
-                      setRoute('cars');
-                    }}
+                    onViewDetails={(car) => navigate(pathForCar(car.id))}
                     onViewAll={() => handleNavigate('cars')}
                   />
                 </motion.div>
@@ -553,7 +601,7 @@ export default function App({
                     brands={brands}
                     favorites={favorites}
                     onToggleFavorite={handleToggleFavorite}
-                    onViewDetails={(car) => setDetailCarId(car.id)}
+                    onViewDetails={(car) => navigate(pathForCar(car.id))}
                   />
                 </motion.div>
               )}
@@ -571,10 +619,7 @@ export default function App({
                     isFavorite={favorites.has(detailCar.id)}
                     dealershipPhone={dealershipPhone}
                     onToggleFavorite={handleToggleFavorite}
-                    onBack={() => {
-                      setDetailCarId(null);
-                      setRoute('cars');
-                    }}
+                    onBack={() => navigate(pathForRoute('cars'))}
                     onSendEnquiry={(car) => handleOpenEnquiryModal(car)}
                   />
                 </motion.div>
@@ -625,7 +670,7 @@ export default function App({
                 <span className="text-neutral-400">Nandu Dhanokar</span>
               </p>
               <span className="text-[9px] text-neutral-700 tracking-wider">
-                version : 9.9
+                version : 10.0
               </span>
             </div>
           </footer>
